@@ -13,7 +13,7 @@ function createWindow() {
   if(!isDev){
     require(path.join(__dirname, 'build-server/server.js'));
   }
-  console.log(path.join(__dirname, "preload.js"))
+  
   mainWindow = new BrowserWindow({ 
     width: 800, 
     height: 680,
@@ -27,16 +27,16 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js") // add "preload" 
 
     }});    
-    //mainWindow.removeMenu()
-  mainWindow.loadURL(
-    
-    isDev ? "http://localhost:3000": url.format({
+    mainWindow.loadURL(
+      
+      isDev ? "http://localhost:3000": url.format({
         pathname: path.join(__dirname, 'build/index.html'),
         protocol: 'file:',
         slashes: true
-    })    
-    );
-    mainWindow.webContents.openDevTools()  
+      })    
+      );
+      mainWindow.removeMenu()
+    //mainWindow.webContents.openDevTools()  
   mainWindow.on("closed", () => (mainWindow = null));
 }
 

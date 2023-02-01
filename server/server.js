@@ -7,13 +7,14 @@ const { TemplateHandler, TemplateExtension } = require('easy-template-x')
 
 const libre = require('libreoffice-convert');
 libre.convertAsync = require('util').promisify(libre.convert);
+require('./config/WebSocket')
 
 appModulePath.addPath(`${__dirname}`)
 
 const path = require('path')
 const Api = express();
 const HTTP = http.Server(Api);
-const filename = 'Plantilla.docx'
+
 
 const folderPath = path.join('C:', 'Gemsap')
 const resultPath = path.join(folderPath, 'Certificados')
@@ -27,25 +28,33 @@ if(!fs.existsSync(resultPath)){
 }
 Api.use(cors());
 Api.use(express.json({extended: true}))
+
 Api.post('/certificado', async (req, res) => {
 
     try {
         const { nombres, apellidos, cc, fecha} = req.body
 
+        const filename = 'Plantilla.docx'
         let fechaDate = new Date(fecha)
         const nombresSplitted = nombres.split(' ')
         const apellidosSplitted = apellidos.split(' ')        
-        let mesName = meses.find(mesObj => mesObj.id === fechaDate.getMonth() + 1).name
-                
-        const toFill = {
+        let mesName = meses.find(mesObj => mesObj.id === (fechaDate.getUTCMonth() + 1)).name
+            //console.log(fechaDate)
+            //console.log(fechaDate.getUTCDate())
+            //console.log(fechaDate.getUTCMonth() + 1)
+            //console.log(fechaDate.getMonth() + 1)
+            //console.log(fechaDate.getFullYear())           
+
+            
+        let toFill = {
             nombres,
             apellidos,
             nombre: nombresSplitted[0],            
             apellido: apellidosSplitted[0],
             cc,
-            dia: fechaDate.getDate() + 1,
+            dia: fechaDate.getUTCDate(),
             mes: mesName,
-            mesnum:fechaDate.getMonth() + 1,
+            mesnum:fechaDate.getUTCMonth() + 1,
             anio:fechaDate.getFullYear(),
             aniov: fechaDate.getFullYear() + 1
         }
@@ -58,15 +67,15 @@ Api.post('/certificado', async (req, res) => {
                 ]
             }
         });
-        
+        //console.log(toFill)
         const file = fs.readFileSync(folderPath + "/" + filename);
         let doc = await handler.process(file, toFill)                
         let pdfBuf = await libre.convertAsync(doc, '.pdf', undefined)
 
         fs.writeFileSync(resultPath + "/" 
-        + `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`, pdfBuf)
+        + `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`, pdfBuf)
         
-        res.status(200).json({msg: `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getMonth() + 1}${fechaDate.getFullYear()}-${cc}.pdf`})
+        res.status(200).json({msg: `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}${fechaDate.getFullYear()}-${cc}.pdf`})
         
     } catch (error) {
         console.log(error)
@@ -82,10 +91,84 @@ Api.post('/certificado', async (req, res) => {
     }
 );
 
+Api.post('/carguemasivo', async (req, res) => {
+    
+    try {
+        const { nombreEmpresa, fecha } = req.body
+
+        const filenameDocx = 'PlantillaSimple.docx'
+        const filenameXlsx = 'Cargue_Masivo.xlsx'
+        const reader = require('xlsx')
+        
+        
+
+        if(!fs.existsSync(resultPath + "/" + nombreEmpresa)){
+            fs.mkdirSync(resultPath + "/" + nombreEmpresa)
+        }
+        
+        let fechaDate = new Date(fecha)
+        let mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name
+        let file = fs.readFileSync(folderPath + "/" + filenameDocx);
+        const plantillaX = reader.readFile(folderPath + "/" + filenameXlsx)
+        const clientsSheet = plantillaX.Sheets['data']
+        const dataClient = reader.utils.sheet_to_json(clientsSheet)        
+        let contador = 1;
+        global.send(contador + ' de ' + dataClient.length)
+        
+
+        for(let client of dataClient){
+            
+            let {nombres, apellidos} = client
+
+            nombres = nombres.toUpperCase()
+            apellidos = apellidos.toUpperCase()
+            
+            let nombresSplitted = nombres.split(' ')
+            let apellidosSplitted = apellidos.split(' ')
+            let toFill = {
+                nombres: nombres,
+                apellidos: apellidos,
+                nombre: nombresSplitted[0],            
+                apellido: apellidosSplitted[0],
+                cc: client.cc,
+                dia: fechaDate.getUTCDate(),
+                mes: mesName,
+                mesnum:fechaDate.getUTCMonth() + 1,
+                anio:fechaDate.getFullYear(),
+                aniov: fechaDate.getFullYear() + 1
+            }
+            const headerExtension = new HeaderExtension();
+            const handler = new TemplateHandler(/* {
+                extensions: {
+                    afterCompilation: [
+                        headerExtension 
+                    ]
+                }
+            } */)
+            let doc = await handler.process(file, toFill)
+            //console.log(doc)
+            let pdfBuf = await libre.convertAsync(doc, '.pdf', undefined)
+            fs.writeFileSync(resultPath + "/" + nombreEmpresa + "/"
+        + `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${client.cc}.pdf`, pdfBuf)
+        contador++
+        global.send(contador + ' de ' + dataClient.length)
+
+        }
+        global.send('Ready')
+        res.json({msg: 'Certificados generados con éxito'})
+    } catch (error) {
+        console.log(error)
+        global.send('Error')
+    }
+
+})
+
+
+
 //PRODUCTION
 process.on('uncaughtException', (err) => {
     console.error(err);
-    console.log("Node NOT Exiting...");
+    console.log("Node NOT Exiting...");    
   });
 
 HTTP.listen(9001, () => {

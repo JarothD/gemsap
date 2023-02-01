@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { llenarDocx } from '../util/DocxToPdf'
 import Swal from 'sweetalert2'
+import { Link } from 'react-router-dom'
+import UserGroup from '../../assets/usergroup.svg'
 
 const CrearCertificado = () => {
     let fechaActual = new Date()
@@ -76,7 +78,10 @@ const CrearCertificado = () => {
             Swal.fire({
                 icon:'error',
                 title:'Ooops',
-                text: 'Algo ha sucedido...' 
+                text: 'Algo ha sucedido...',
+                didOpen: () => {
+                    Swal.hideLoading()
+                  } 
             })
         }
          
@@ -98,7 +103,10 @@ const CrearCertificado = () => {
             <form
                 onSubmit={onSubmit}
                 id='form-certificado'>
-                    <h2>Crear Certificado</h2>
+                    {/* <h2>Crear Certificado</h2> */}
+                    <Link to='/carguemasivo'>
+                        <img id='logo-principal' src={UserGroup} />                
+                    </Link>
                     <div id='contenedor-form'>
                         <label>
                             Nombres:

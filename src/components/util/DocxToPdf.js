@@ -37,3 +37,27 @@ export async function llenarDocx(data){
         
     }        
 }
+
+export async function cargueMasivo(data){
+    try {
+        const {nombreEmpresa, fecha} = data
+
+        const respuesta = await clienteAxios.post('/carguemasivo', {
+            nombreEmpresa: nombreEmpresa.toUpperCase(),
+            fecha
+        })
+        Swal.fire({
+            icon:'success',
+            title:'Éxito',
+            text: respuesta.data.msg,
+            didOpen: () => {
+                Swal.hideLoading()
+              }
+        })
+
+        
+        
+    } catch (error) {
+        
+    }
+}
