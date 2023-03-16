@@ -3,7 +3,13 @@ const http = require('http')
 const express = require('express')
 const cors = require('cors')
 const fs = require('fs')
-const { TemplateHandler, TemplateExtension } = require('easy-template-x')
+const { TemplateHandler, TemplateExtension, MimeType } = require('easy-template-x')
+const QRCode =require('qrcode')
+
+let QRTemplate = (nombreCompleto, documento, fechaFin) => {
+return `GEMSAP Certifica Que ${nombreCompleto}, Con Documento ${documento}. Asistió Al Curso De Manipulación Higiénica De Alimentos y BPM. Vàlido Hasta ${fechaFin}
+    `
+}
 
 const libre = require('libreoffice-convert');
 libre.convertAsync = require('util').promisify(libre.convert);
@@ -29,6 +35,24 @@ if(!fs.existsSync(resultPath)){
 Api.use(cors());
 Api.use(express.json({extended: true}))
 
+  
+
+const generateQr = async (templateQr) => {
+    var opts = {
+        errorCorrectionLevel: 'H',
+        type: 'image/jpeg',
+        quality: 0.1,
+                    
+      }
+    try {
+       await QRCode.toFile('qr.png', templateQr, opts)
+        
+    } catch (error) {
+        console.log(error)
+    }
+
+}
+
 Api.post('/certificado', async (req, res) => {
 
     try {
@@ -38,13 +62,7 @@ Api.post('/certificado', async (req, res) => {
         let fechaDate = new Date(fecha)
         const nombresSplitted = nombres.split(' ')
         const apellidosSplitted = apellidos.split(' ')        
-        let mesName = meses.find(mesObj => mesObj.id === (fechaDate.getUTCMonth() + 1)).name
-            //console.log(fechaDate)
-            //console.log(fechaDate.getUTCDate())
-            //console.log(fechaDate.getUTCMonth() + 1)
-            //console.log(fechaDate.getMonth() + 1)
-            //console.log(fechaDate.getFullYear())           
-
+        let mesName = meses.find(mesObj => mesObj.id === (fechaDate.getUTCMonth() + 1)).name           
             
         let toFill = {
             nombres,
@@ -58,24 +76,46 @@ Api.post('/certificado', async (req, res) => {
             anio:fechaDate.getFullYear(),
             aniov: fechaDate.getFullYear() + 1
         }
+        
+        await generateQr(QRTemplate(nombres + " " + apellidos, 
+        cc, toFill.dia + "/" + toFill.mesnum + "/" + toFill.aniov))
 
         const headerExtension = new HeaderExtension();
-        const handler = new TemplateHandler({
-            extensions: {
-                afterCompilation: [
-                    headerExtension 
-                ]
-            }
-        });
-        //console.log(toFill)
-        const file = fs.readFileSync(folderPath + "/" + filename);
-        let doc = await handler.process(file, toFill)                
+const handler = new TemplateHandler({
+    extensions: {
+        afterCompilation: [
+            headerExtension 
+        ]
+    }
+}); 
+             
+        
+        let file = fs.readFileSync(folderPath + "/" + filename);
+        let qrfile = fs.readFileSync("qr.png")
+        let doc = await handler.process(file, {...toFill,
+            qr: {_type: "image",
+            source: qrfile,
+            format: MimeType.Png,
+            width: 100,
+            height: 100        
+            },
+            qr2: {_type: "image",
+            source: qrfile,
+            format: MimeType.Png,
+            width: 140,
+            height: 140
+        
+        }})
+        
+        
         let pdfBuf = await libre.convertAsync(doc, '.pdf', undefined)
 
         fs.writeFileSync(resultPath + "/" 
         + `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`, pdfBuf)
         
         res.status(200).json({msg: `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}${fechaDate.getFullYear()}-${cc}.pdf`})
+
+        
         
     } catch (error) {
         console.log(error)
@@ -115,10 +155,24 @@ Api.post('/carguemasivo', async (req, res) => {
         let contador = 1;
         global.send(contador + ' de ' + dataClient.length)
         
+        var opts = {
+            errorCorrectionLevel: 'H',
+            type: 'image/jpeg',
+            quality: 0.1,            
+          }
+
+            const headerExtension = new HeaderExtension();
+            const handler = new TemplateHandler({
+                /* extensions: {
+                    afterCompilation: [
+                        headerExtension 
+                    ]
+                } */
+            }); 
 
         for(let client of dataClient){
             
-            let {nombres, apellidos} = client
+            let {nombres, apellidos, cc} = client
 
             nombres = nombres.toUpperCase()
             apellidos = apellidos.toUpperCase()
@@ -137,19 +191,34 @@ Api.post('/carguemasivo', async (req, res) => {
                 anio:fechaDate.getFullYear(),
                 aniov: fechaDate.getFullYear() + 1
             }
-            const headerExtension = new HeaderExtension();
-            const handler = new TemplateHandler(/* {
-                extensions: {
-                    afterCompilation: [
-                        headerExtension 
-                    ]
-                }
-            } */)
-            let doc = await handler.process(file, toFill)
-            //console.log(doc)
+
+            
+            await generateQr(QRTemplate(nombres + " " + apellidos, 
+            cc, toFill.dia + "/" + toFill.mesnum + "/" + toFill.aniov))
+
+            
+            let qrfile = fs.readFileSync("qr.png")
+            
+            let doc = await handler.process(file, {...toFill,
+                qr: {_type: "image",
+                source: qrfile,
+                format: MimeType.Png,
+                width: 100,
+                height: 100        
+                },
+                qr2: {_type: "image",
+                source: qrfile,
+                format: MimeType.Png,
+                width: 140,
+                height: 140
+            
+            }})
+                       
             let pdfBuf = await libre.convertAsync(doc, '.pdf', undefined)
             fs.writeFileSync(resultPath + "/" + nombreEmpresa + "/"
         + `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${client.cc}.pdf`, pdfBuf)
+            
+            
         contador++
         global.send(contador + ' de ' + dataClient.length)
 

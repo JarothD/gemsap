@@ -2,7 +2,7 @@
   "name": "gemsap",
   "description": "Creador de Certificados",
   "author": "Jarothi",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "dependencies": {
     "@babel/cli": "^7.20.7",
@@ -23,6 +23,7 @@
     "libreoffice-convert": "^1.4.1",
     "nodemon": "^2.0.20",
     "piping": "^1.0.0-rc.4",
+    "qrcode": "^1.5.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.7.0",
