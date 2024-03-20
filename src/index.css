@@ -26,7 +26,7 @@ body {
 
 #form-certificado {
   /* width: 20rem; */
-  color: var(--color-cinco);
+  color: var(--color-cuatro);
   background-color: var(--color-tres);
   padding: 1rem;
   padding-right: 4rem;
@@ -42,24 +42,26 @@ body {
   text-align: start;
   padding: 0.3rem;
   font-weight: bolder;
-  padding-top: 1rem;
+  /* padding-top: 0.5rem; */
   
 }
 
 #input-form {
   width: 12rem;
-  height: 1.5rem;
+  height: 1.2rem;
   text-align: start;
-  font-size: 24px;
+  font-size: 1rem;
 }
 
 #boton-form {
   margin-top: 1rem;
-  width: 5rem;
-  height: 1.5rem;
+  
+  width: 10rem;
+  height: 2rem;
   border-radius: 1rem;
   background-color: var(--color-cuatro);
   color: var(--color-cinco);
+  font-size: 1.3rem;
 }
 #boton-form:hover {
   background-color: var(--color-uno);

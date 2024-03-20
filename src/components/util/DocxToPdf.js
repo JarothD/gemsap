@@ -58,6 +58,55 @@ export async function cargueMasivo(data){
         
         
     } catch (error) {
-        
+        if(error.name == 'AxiosError'){
+            Swal.fire({
+                icon:'error',
+                title:'Ooops..',
+                text: 'LibreOffice no esta Instalado'
+            })            
+        }
+        if(error.response.data.msg){
+            Swal.fire({
+                icon:'error',
+                title:'Ooops..',
+                text: error.response.data.msg
+            })
+        }
+    }
+}
+
+export async function cargueModular(data) {
+    try {
+        const { nombreEmpresa, modulo, fecha } = data
+
+        const respuesta = await clienteAxios.post('/modulos', {
+            nombreEmpresa: nombreEmpresa.toUpperCase(),
+            modulo,
+            fecha
+
+        })
+        Swal.fire({
+            icon:'success',
+            title:'Éxito',
+            text: respuesta.data.msg,
+            didOpen: () => {
+                Swal.hideLoading()
+              }
+        })
+    } catch (error) {
+        if(error.name == 'AxiosError'){
+            Swal.fire({
+                icon:'error',
+                title:'Ooops..',
+                text: 'LibreOffice no esta Instalado'
+            })            
+        }
+        if(error.response.data.msg){
+            Swal.fire({
+                icon:'error',
+                title:'Ooops..',
+                text: error.response.data.msg
+            })
+        }
     }
 }

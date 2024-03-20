@@ -3,7 +3,13 @@
 }
 
 #logo-principal {
-  width: 3rem;    
-  display: absolute;
+  padding-left: 1rem;
+  height: 2.5rem;
+  display: absolute;  
+}
+
+#buttons-container {
+  display: flex;
+  align-items: center;
   
 }

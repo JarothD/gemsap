@@ -1,14 +1,14 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom';
-import { cargueMasivo } from '../util/DocxToPdf';
+import User from '../../assets/user.svg'
+import UserGroup from '../../assets/usergroup.svg'
 import wss from '../../config/wss'
 import Swal from 'sweetalert2'
-
-import User from '../../assets/user.svg'
-import Module from '../../assets/module.svg'
 import Gear from '../../assets/gear.svg'
+import { cargueModular } from '../util/DocxToPdf';
 
-const CargueMasivo = () => {
+
+const CertificarModulo = () => {
 
     wss.onmessage = (event) => {
         //console.log(event.data)
@@ -57,9 +57,10 @@ const CargueMasivo = () => {
     if(mes <10){
         mes = '0' + mes;
     }
-    let format = anio + "-" + mes + "-" + dia    
+    let format = anio + "-" + mes + "-" + dia 
 
     const [datos, setDatos] = useState({
+        modulo: 1 ,
         nombreEmpresa: '',
         fecha: format
     })
@@ -68,8 +69,9 @@ const CargueMasivo = () => {
 
     const onSubmit = async e => {
         e.preventDefault();
+        
         Swal.fire({
-            title: 'Generando Certificado',
+            title: 'Generando Modulo' + datos.modulo,
             html: 'Cargando...',
             allowEscapeKey: false,
             allowOutsideClick: false,
@@ -77,7 +79,7 @@ const CargueMasivo = () => {
               Swal.showLoading()
             }
           });
-        try {
+          try {
             if(datos.nombreEmpresa.length < 2){
                 Swal.fire({
                     icon:'error',
@@ -89,20 +91,16 @@ const CargueMasivo = () => {
                 })
                 return;  
             }
-            cargueMasivo(datos)
-        } catch (error) {
+            cargueModular(datos)
+          } catch (error) {
             console.log(error)
             Swal.fire({
                 icon:'error',
                 title:'Ooops',
                 text: 'Algo ha sucedido...' 
             })
-        }
-
-    }
-
-
-
+          }
+    } 
 
     const onChange = e => {        
         setDatos({
@@ -112,57 +110,70 @@ const CargueMasivo = () => {
     }
 
     return ( 
-    <div
-        id='crear-certificado'>
-            <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px"></img>
+    <div id='crear-certificado'>
+        <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px"></img>
         <form 
+            id='form-certificado'
             autoComplete='off'
-            onSubmit={onSubmit} 
-            id='form-certificado'>
-            {/* <Link to='/'>Cargue Individual</Link> */}
+            onSubmit={onSubmit}>
             <div id='buttons-container'>
                 <Link to='/'>
-                    <img id='logo-principal' src={User} />
+                    <img id='logo-principal' src={User} />                
                 </Link>
-                <Link to='/modulos'>
-                    <img id='logo-principal' src={Module} />                
+                <Link to='/carguemasivo'>
+                    <img id='logo-principal' src={UserGroup} />                
                 </Link>
                 {/* <Link to='/opciones'>
                     <img id='logo-principal' src={Gear} />                
-                </Link>             */}    
+                </Link> */}
             </div>
             <div id='contenedor-form'>
-                <h3><strong>Certificado Grupal</strong></h3>
+                        <h3><strong>Certificado Modular</strong></h3>
             </div>
             <div id='contenedor-form'>
                 <label>
-                    Nombre Empresa:
+                    Nombre Empresa: 
                 </label>
                 <input 
-                    id='input-form' 
+                    id='input-form'
                     name='nombreEmpresa'
                     onChange={onChange}
                     value={datos.nombreEmpresa}
-                    type='text' 
+                    type='text'
                 />
             </div>
             <div id='contenedor-form'>
                 <label>
-                    Fecha Expedición:
+                    Modulo
+                </label>
+                <select 
+                id='input-form'
+                name='modulo'
+                onChange={onChange}
+                value={datos.modulo}
+                >
+                    <option>1</option>
+                    <option>2</option>
+                    <option>3</option>
+                </select>
+            </div>
+            
+            <div id='contenedor-form'>
+                <label>
+                    Techa Expedición: 
                 </label>
                 <input 
-                    id='input-form' 
+                    id='input-form'
                     name='fecha'
                     value={datos.fecha}
                     onChange={onChange}
-                    type='date' 
+                    type='date'
                 />
             </div>
-            <button id='boton-form' type='submit'>Certificar</button>
-            {/* // Añadir "PISTA" de archivo excel */}
+            <button id='boton-form' type='submit'>Crear Modulos</button>
         </form>
     </div> 
     );
 }
  
-export default CargueMasivo;
+export default CertificarModulo;
