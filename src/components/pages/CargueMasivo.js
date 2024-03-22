@@ -6,7 +6,7 @@ import Swal from 'sweetalert2'
 
 import User from '../../assets/user.svg'
 import Module from '../../assets/module.svg'
-import Gear from '../../assets/gear.svg'
+import Signature from '../../assets/signature.svg'
 
 const CargueMasivo = () => {
 
@@ -127,9 +127,9 @@ const CargueMasivo = () => {
                 <Link to='/modulos'>
                     <img id='logo-principal' src={Module} />                
                 </Link>
-                {/* <Link to='/opciones'>
-                    <img id='logo-principal' src={Gear} />                
-                </Link>             */}    
+                <Link to='/firma'>
+                    <img id='logo-principal' src={Signature} />                
+                </Link>    
             </div>
             <div id='contenedor-form'>
                 <h3><strong>Certificado Grupal</strong></h3>

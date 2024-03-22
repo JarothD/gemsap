@@ -4,9 +4,10 @@ import Swal from 'sweetalert2'
 import { Link } from 'react-router-dom'
 import UserGroup from '../../assets/usergroup.svg'
 import Module from '../../assets/module.svg'
-import Gear from '../../assets/gear.svg'
+import Signature from '../../assets/signature.svg'
 
 const CrearCertificado = () => {
+    
     let fechaActual = new Date()
     let anio = fechaActual.getFullYear(),
         mes = fechaActual.getMonth() + 1,
@@ -114,9 +115,9 @@ const CrearCertificado = () => {
                         <Link to='/modulos'>
                             <img id='logo-principal' src={Module} />                
                         </Link>
-                        {/* <Link to='/opciones'>
-                            <img id='logo-principal' src={Gear} />                
-                        </Link> */}
+                        <Link to='/firma'>
+                            <img id='logo-principal' src={Signature} />                
+                        </Link>
                     </div>
                     <div id='contenedor-form'>
                         <h3><strong>Certificado Individual</strong></h3>

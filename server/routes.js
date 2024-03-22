@@ -3,19 +3,17 @@ const fs = require('fs');
 const { TemplateHandler, TemplateExtension, MimeType } = require('easy-template-x');
 const QRCode = require('qrcode');
 const libre = require('libreoffice-convert');
-const { folderPath, resultPath, meses, getSettings, getFirmaBuffer, resultModulePath } = require('./config/Data');
+const { folderPath, resultPath, meses, getSettings, getBuffer, resultModulePath, saveSettings } = require('./config/Data');
 const reader = require('xlsx');
 
 const router = express.Router();
 
 let QRTemplate = (nombreCompleto, documento, fechaFin) => {
-    return `GEMSAP Certifica Que ${nombreCompleto}, Con Documento ${documento}. Asistió Al Curso De Manipulación Higiénica De Alimentos y BPM. Vàlido Hasta ${fechaFin}
-        `
+    return `GEMSAP Certifica Que ${nombreCompleto}, Con Número de Documento ${documento}. Asistió Al Curso De Manipulación Higiénica De Alimentos y BPM. Vàlido Hasta ${fechaFin}. Mayor Información Al WhatsApp 3107089494.`
     }
 
-let QRTemplateModule = (nombreCompleto, documento, fechaFin) => {
-    return `GEMSAP Certifica Que ${nombreCompleto}, Con Documento ${documento}. Asistió Al Curso De Manipulación Higiénica De Alimentos y BPM. Vàlido Hasta ${fechaFin}
-        `
+let QRTemplateModule = (nombreCompleto, documento, fechaExp, modulo) => {
+    return `GEMSAP Certifica Que ${nombreCompleto}, Con Número de Documento ${documento}. El dia ${fechaExp} Realizo el Modulo ${modulo} Del Curso De Manipulación Higiénica De Alimentos y BPM. Mayor Información Al WhatsApp 3107089494.`
     }
 
 const generateQr = async (templateQr) => {
@@ -32,10 +30,34 @@ const generateQr = async (templateQr) => {
     }
 };
 
+router.get('/firmas', async (req, res) => {
+    try {
+        const { firmas, firmaSeleccionada } = getSettings()
+        res.json({firmas, firmaSeleccionada})
+    } catch (error) {
+        console.log(error)
+    }
+})
+
+router.post('/firmas', async (req, res) => {
+    try {
+        const { perfil } = req.body
+        let settings = getSettings()
+        settings.firmaSeleccionada = perfil
+        saveSettings(settings)
+        res.json({msg: 'ok'})
+    } catch (error) {
+        console.log(error)
+    }
+})
+
 router.post('/modulos', async (req, res) => {
     try {
         const { nombreEmpresa, fecha, modulo } = req.body;
-        const { nombreFirma, pathFirma, tituloFirma, modulos } = getSettings()
+        const {  modulos, firmas, firmaSeleccionada } = getSettings()
+
+        const { nombreFirma, tituloFirma, tarjetaProfesional, pathFirma } = firmas.find(fir => fir.firma === firmaSeleccionada)
+
         const filenameDocx = 'PlantillaModulo.docx';
         const filenameXlsx = 'Cargue_Modulo.xlsx';
 
@@ -50,7 +72,7 @@ router.post('/modulos', async (req, res) => {
         // Crear objeto toFill una vez fuera del bucle
         const fechaDate = new Date(fecha);
         const mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
-        const chosenModule = modulos.find(toFind => toFind.modulo === modulo)
+        const chosenModule = modulos.find(toFind => toFind.modulo == modulo)
         
         const toFillBase = {
             dia: fechaDate.getUTCDate(),
@@ -60,9 +82,10 @@ router.post('/modulos', async (req, res) => {
             aniov: fechaDate.getFullYear() + 1,
             nombreFirma,
             tituloFirma,
+            tarjetaProfesional,
             firma: {
                 _type: 'image',
-                source: getFirmaBuffer(pathFirma),
+                source: getBuffer(pathFirma),
                 format: MimeType.Png,
                 width: 170,
                 height: 110
@@ -97,7 +120,7 @@ router.post('/modulos', async (req, res) => {
                 cc: cc
             };
 
-            await generateQr(QRTemplate(nombres + ' ' + apellidos, cc, `${toFill.dia}/${toFill.mesnum}/${toFill.aniov}`));
+            await generateQr(QRTemplateModule(nombres + ' ' + apellidos, cc, `${toFill.dia}/${toFill.mesnum}/${toFill.anio}`, chosenModule));
 
             const qrfile = fs.readFileSync('qr.png');
 
@@ -131,7 +154,9 @@ router.post('/certificado', async (req, res) => {
     // El código de tu ruta /certificado
     try {
         const { nombres, apellidos, cc, fecha} = req.body
-        const { nombreFirma, pathFirma, tituloFirma } = getSettings()
+        const { pathFirmaGemsap, firmaSeleccionada, firmas } = getSettings()
+
+        const { nombreFirma, tituloFirma, tarjetaProfesional, pathAnexo, pathFirma } = firmas.find(fir => fir.firma === firmaSeleccionada)
 
         const filename = 'Plantilla.docx'
         let fechaDate = new Date(fecha)
@@ -152,12 +177,27 @@ router.post('/certificado', async (req, res) => {
             aniov: fechaDate.getFullYear() + 1,
             nombreFirma,
             tituloFirma,
-            firma: {
+            tarjetaProfesional,
+            firmaGemsap: {
                 _type: 'image',
-                source: getFirmaBuffer(pathFirma),
+                source: getBuffer(pathFirmaGemsap),
                 format: MimeType.Png,
                 width: 170,
                 height: 110
+            },
+            firma: {
+                _type: 'image',
+                source: getBuffer(pathFirma),
+                format: MimeType.Png,
+                width: 170,
+                height: 110
+            },
+            anexo: {
+                _type: 'image',
+                source: getBuffer(pathAnexo),
+                format: MimeType.Png,
+                width: 673,
+                height: 802
             }
         }
         
@@ -219,8 +259,9 @@ router.post('/carguemasivo', async (req, res) => {
     try {
         const { nombreEmpresa, fecha } = req.body;
 
-        const { nombreFirma, pathFirma, tituloFirma } = getSettings()
-        
+        const { pathFirmaGemsap, firmaSeleccionada, firmas } = getSettings()
+
+        const { nombreFirma, tituloFirma, tarjetaProfesional, pathFirma } = firmas.find(fir => fir.firma === firmaSeleccionada)
 
 
         const filenameDocx = 'PlantillaSimple.docx';
@@ -246,13 +287,21 @@ router.post('/carguemasivo', async (req, res) => {
             aniov: fechaDate.getFullYear() + 1,
             nombreFirma,
             tituloFirma,
-            firma: {
+            tarjetaProfesional,
+            firmaGemsap: {
                 _type: 'image',
-                source: getFirmaBuffer(pathFirma),
+                source: getBuffer(pathFirmaGemsap),
                 format: MimeType.Png,
                 width: 170,
                 height: 110
-            }
+            },
+            firma: {
+                _type: 'image',
+                source: getBuffer(pathFirma),
+                format: MimeType.Png,
+                width: 170,
+                height: 110
+            },
         };
 
         if (!fs.existsSync(resultPath + '/' + nombreEmpresa)) {

@@ -4,7 +4,7 @@ import User from '../../assets/user.svg'
 import UserGroup from '../../assets/usergroup.svg'
 import wss from '../../config/wss'
 import Swal from 'sweetalert2'
-import Gear from '../../assets/gear.svg'
+import Signature from '../../assets/signature.svg'
 import { cargueModular } from '../util/DocxToPdf';
 
 
@@ -123,9 +123,9 @@ const CertificarModulo = () => {
                 <Link to='/carguemasivo'>
                     <img id='logo-principal' src={UserGroup} />                
                 </Link>
-                {/* <Link to='/opciones'>
-                    <img id='logo-principal' src={Gear} />                
-                </Link> */}
+                <Link to='/firma'>
+                    <img id='logo-principal' src={Signature} />                
+                </Link>
             </div>
             <div id='contenedor-form'>
                         <h3><strong>Certificado Modular</strong></h3>

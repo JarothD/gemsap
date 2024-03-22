@@ -38,6 +38,7 @@ export async function llenarDocx(data){
     }        
 }
 
+
 export async function cargueMasivo(data){
     try {
         const {nombreEmpresa, fecha} = data
@@ -74,6 +75,7 @@ export async function cargueMasivo(data){
         }
     }
 }
+
 
 export async function cargueModular(data) {
     try {
