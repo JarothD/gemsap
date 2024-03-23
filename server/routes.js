@@ -120,7 +120,7 @@ router.post('/modulos', async (req, res) => {
                 cc: cc
             };
 
-            await generateQr(QRTemplateModule(nombres + ' ' + apellidos, cc, `${toFill.dia}/${toFill.mesnum}/${toFill.anio}`, chosenModule));
+            await generateQr(QRTemplateModule(nombres + ' ' + apellidos, cc, `${toFill.dia}/${toFill.mesnum}/${toFill.anio}`, chosenModule.modulo));
 
             const qrfile = fs.readFileSync('qr.png');
 
