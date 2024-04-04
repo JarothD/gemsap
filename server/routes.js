@@ -70,16 +70,15 @@ router.post('/modulos', async (req, res) => {
         const dataClient = reader.utils.sheet_to_json(clientsSheet);
 
         // Crear objeto toFill una vez fuera del bucle
-        const fechaDate = new Date(fecha);
-        const mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
+        //const fechaDate = new Date(fecha);
+        //const mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
         const chosenModule = modulos.find(toFind => toFind.modulo == modulo)
         
         const toFillBase = {
-            dia: fechaDate.getUTCDate(),
+            /* dia: fechaDate.getUTCDate(),
             mes: mesName,
             mesnum: fechaDate.getUTCMonth() + 1,
-            anio: fechaDate.getFullYear(),
-            aniov: fechaDate.getFullYear() + 1,
+            anio: fechaDate.getFullYear(),   */          
             nombreFirma,
             tituloFirma,
             tarjetaProfesional,
@@ -110,9 +109,21 @@ router.post('/modulos', async (req, res) => {
             
             let nombresSplitted = nombres.split(' ');
             let apellidosSplitted = apellidos.split(' ');
+            let fechaDate = new Date(fecha);
+            let mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
+            if(client.fecha){
+                let nuevaFecha = cambiarFormatoFecha(client.fecha)
+                fechaDate = new Date(nuevaFecha);
+                mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
+            }
             
+
             let toFill = {
                 ...toFillBase,
+                dia: fechaDate.getUTCDate(),
+                mes: mesName,
+                mesnum: fechaDate.getUTCMonth() + 1,
+                anio: fechaDate.getFullYear(),  
                 nombres: nombres,
                 apellidos: apellidos,
                 nombre: nombresSplitted[0],            
@@ -182,8 +193,8 @@ router.post('/certificado', async (req, res) => {
                 _type: 'image',
                 source: getBuffer(pathFirmaGemsap),
                 format: MimeType.Png,
-                width: 170,
-                height: 110
+                width: 166,
+                height: 106
             },
             firma: {
                 _type: 'image',
@@ -276,15 +287,10 @@ router.post('/carguemasivo', async (req, res) => {
         const dataClient = reader.utils.sheet_to_json(clientsSheet);
 
         // Crear objeto toFill una vez fuera del bucle
-        const fechaDate = new Date(fecha);
-        const mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
+        
         
         const toFillBase = {
-            dia: fechaDate.getUTCDate(),
-            mes: mesName,
-            mesnum: fechaDate.getUTCMonth() + 1,
-            anio: fechaDate.getFullYear(),
-            aniov: fechaDate.getFullYear() + 1,
+            
             nombreFirma,
             tituloFirma,
             tarjetaProfesional,
@@ -292,8 +298,8 @@ router.post('/carguemasivo', async (req, res) => {
                 _type: 'image',
                 source: getBuffer(pathFirmaGemsap),
                 format: MimeType.Png,
-                width: 170,
-                height: 110
+                width: 166,
+                height: 106
             },
             firma: {
                 _type: 'image',
@@ -319,9 +325,21 @@ router.post('/carguemasivo', async (req, res) => {
             
             let nombresSplitted = nombres.split(' ');
             let apellidosSplitted = apellidos.split(' ');
+            let fechaDate = new Date(fecha);
+            let mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
+            if(client.fecha){
+                let nuevaFecha = cambiarFormatoFecha(client.fecha)
+                fechaDate = new Date(nuevaFecha);
+                mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
+            }
             
             let toFill = {
                 ...toFillBase,
+                dia: fechaDate.getUTCDate(),
+                mes: mesName,
+                mesnum: fechaDate.getUTCMonth() + 1,
+                anio: fechaDate.getFullYear(),
+                aniov: fechaDate.getFullYear() + 1,
                 nombres: nombres,
                 apellidos: apellidos,
                 nombre: nombresSplitted[0],            
@@ -380,6 +398,42 @@ class HeaderExtension extends TemplateExtension {
            //this.headerTags = this.utilities.compiler.parseTags(headerXml);
       }
    }
+}
+
+function cambiarFormatoFecha(fechaString) {
+    if (!isNaN(fechaString)) {
+        // Si es un número, asumir que es un número de serie de fecha y devolverlo tal como está
+        return numeroASerieFecha(fechaString)
+    }
+    // Reemplazar "/" por "-"
+    let fechaSinSlash = fechaString.replace(/\//g, '-');
+    
+    // Separar la fecha en partes: dd, mm, yyyy
+    let partesFecha = fechaSinSlash.split('-');
+    
+    // Crear la nueva fecha con el formato yyyy-mm-dd
+    let nuevaFecha = `${partesFecha[2]}-${partesFecha[1]}-${partesFecha[0]}`;
+    
+    return nuevaFecha;
+}
+
+function numeroASerieFecha(numero) {
+    // Definir la fecha base de Excel (1 de enero de 1900)
+    let fechaBase = new Date("1900-01-01");
+    console.log(numero)
+    // Calcular la fecha sumando el número de días (ajustado por el desplazamiento de 1 día) a la fecha base
+    let fecha = new Date(fechaBase.getTime() + (numero - 1) * 24 * 60 * 60 * 1000);
+    
+    // Extraer el día, mes y año de la fecha
+    let dia = fecha.getDate().toString().padStart(2, '0');
+    let mes = (fecha.getMonth() + 1).toString().padStart(2, '0'); // Los meses en JavaScript van de 0 a 11
+    let anio = fecha.getFullYear();
+    
+    // Crear la fecha en formato "dd/mm/yyyy"
+    let fechaFormateada = `${dia}-${mes}-${anio}`;
+    console.log(fechaFormateada)
+    
+    return fechaFormateada;
 }
 
 module.exports = router;

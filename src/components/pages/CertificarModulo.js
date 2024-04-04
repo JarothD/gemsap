@@ -160,7 +160,7 @@ const CertificarModulo = () => {
             
             <div id='contenedor-form'>
                 <label>
-                    Techa Expedición: 
+                    Fecha Expedición: 
                 </label>
                 <input 
                     id='input-form'
