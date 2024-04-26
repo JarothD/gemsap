@@ -231,14 +231,14 @@ router.post('/certificado', async (req, res) => {
             qr: {_type: "image",
             source: qrfile,
             format: MimeType.Png,
-            width: 100,
-            height: 100        
+            width: 106,
+            height: 106        
             },
             qr2: {_type: "image",
             source: qrfile,
             format: MimeType.Png,
-            width: 140,
-            height: 140
+            width: 142,
+            height: 142
         
         }})
         
@@ -358,15 +358,15 @@ router.post('/carguemasivo', async (req, res) => {
                     _type: 'image',
                     source: qrfile,
                     format: MimeType.Png,
-                    width: 100,
-                    height: 100
+                    width: 106,
+                    height: 106
                 },
                 qr2: {
                     _type: 'image',
                     source: qrfile,
                     format: MimeType.Png,
-                    width: 140,
-                    height: 140
+                    width: 142,
+                    height: 142
                 }
             });
 
