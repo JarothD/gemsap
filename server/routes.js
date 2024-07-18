@@ -102,13 +102,13 @@ router.post('/modulos', async (req, res) => {
         global.send(contador + ' de ' + dataClient.length);
 
         for (const client of dataClient) {
-            let { nombres, apellidos, cc } = client;
+            let { nombres, cc } = client;
 
             nombres = nombres.toUpperCase();
-            apellidos = apellidos.toUpperCase();
+            //apellidos = apellidos.toUpperCase();
             
             let nombresSplitted = nombres.split(' ');
-            let apellidosSplitted = apellidos.split(' ');
+            //let apellidosSplitted = apellidos.split(' ');
             let fechaDate = new Date(fecha);
             let mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
             if(client.fecha){
@@ -125,13 +125,11 @@ router.post('/modulos', async (req, res) => {
                 mesnum: fechaDate.getUTCMonth() + 1,
                 anio: fechaDate.getFullYear(),  
                 nombres: nombres,
-                apellidos: apellidos,
-                nombre: nombresSplitted[0],            
-                apellido: apellidosSplitted[0],
+                nombre: nombresSplitted[0],
                 cc: cc
             };
 
-            await generateQr(QRTemplateModule(nombres + ' ' + apellidos, cc, `${toFill.dia}/${toFill.mesnum}/${toFill.anio}`, chosenModule.modulo));
+            await generateQr(QRTemplateModule(nombres + ' ', cc, `${toFill.dia}/${toFill.mesnum}/${toFill.anio}`, chosenModule.modulo));
 
             const qrfile = fs.readFileSync('qr.png');
 
@@ -147,7 +145,7 @@ router.post('/modulos', async (req, res) => {
             });
             const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
             
-            fs.writeFileSync(`${resultModulePath}/${nombreEmpresa}/M${modulo}_${apellidosSplitted[0]}_${nombresSplitted[0]}_${toFill.mesnum}_${toFill.anio}_${cc}.pdf`, pdfBuf);
+            fs.writeFileSync(`${resultModulePath}/${nombreEmpresa}/M${modulo}_${nombresSplitted[0]}_${toFill.mesnum}_${toFill.anio}_${cc}.pdf`, pdfBuf);
             
             contador++;
             global.send(contador + ' de ' + dataClient.length);
@@ -231,8 +229,8 @@ router.post('/certificado', async (req, res) => {
             qr: {_type: "image",
             source: qrfile,
             format: MimeType.Png,
-            width: 106,
-            height: 106        
+            width: 115,
+            height: 100        
             },
             qr2: {_type: "image",
             source: qrfile,
