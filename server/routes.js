@@ -18,9 +18,9 @@ let QRTemplateModule = (nombreCompleto, documento, fechaExp, modulo) => {
 
 const generateQr = async (templateQr) => {
     var opts = {
-        errorCorrectionLevel: 'H',
+        errorCorrectionLevel: 'M',
         type: 'image/jpeg',
-        quality: 0.1,
+        quality: 0.9,
     };
 
     try {
