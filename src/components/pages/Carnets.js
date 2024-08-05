@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { cargueMasivo } from '../util/DocxToPdf';
+import { cargueCarnets, cargueMasivo } from '../util/DocxToPdf';
 import wss from '../../config/wss'
 import Swal from 'sweetalert2'
 import NavMenu from '../util/NavMenu';
@@ -87,7 +87,7 @@ const Carnets = () => {
                 })
                 return;  
             }
-            cargueMasivo(datos)
+            cargueCarnets(datos)
         } catch (error) {
             console.log(error)
             Swal.fire({
@@ -113,6 +113,7 @@ const Carnets = () => {
     <div id='crear-certificado'>
         <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px"></img>
         <form
+        onSubmit={onSubmit}
             id='form-certificado'>
                 <NavMenu actualPage={actualPage}/>
                 <div id='contenedor-titulo'>

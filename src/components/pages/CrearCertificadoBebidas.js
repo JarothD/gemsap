@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import NavMenu from '../util/NavMenu';
+import { llenarDocx } from '../util/DocxToPdf';
+import Swal from 'sweetalert2';
 
 const CrearCertificadoBebidas = () => {
     const actualPage = 'bebidas'
@@ -68,7 +70,7 @@ const CrearCertificadoBebidas = () => {
                 })
     
             }else {
-                llenarDocx(datos)
+                llenarDocx(datos, "Bebidas")
                 
             }
             

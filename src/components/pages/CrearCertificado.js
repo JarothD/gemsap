@@ -76,7 +76,7 @@ const CrearCertificado = () => {
                 })
     
             }else {
-                llenarDocx(datos)
+                llenarDocx(datos, "Alimentos")
                 
             }
             

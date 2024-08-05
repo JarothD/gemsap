@@ -25,13 +25,9 @@ const CargueMasivo = () => {
                   }
             })
             wss.send('Ready')
-
         }
-        
         else {
-            
-            setCargando(event.data)
-            
+            setCargando(event.data)            
             Swal.fire({
                 title: 'Generando Certificado',
                 html: cargando,
@@ -41,8 +37,6 @@ const CargueMasivo = () => {
                   Swal.showLoading()
                 }
               })
-
-
         }  
       }
 
@@ -99,9 +93,6 @@ const CargueMasivo = () => {
         }
 
     }
-
-
-
 
     const onChange = e => {        
         setDatos({

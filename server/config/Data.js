@@ -8,6 +8,8 @@ const totalPerfiles = 4;
 
 const folderPath = path.join('C:', 'Gemsap')
 const resultPath = path.join(folderPath, 'Certificados')
+const resultDrinksPath = path.join(folderPath, 'Bebidas')
+const cardsPath = path.join(folderPath, 'Carnets')
 const resultModulePath = path.join(folderPath, 'Modulos')
 const signsFilePath = path.join(folderPath, 'Firmas')
 const settingsFilePath = path.join(folderPath, 'settings.json')
@@ -15,12 +17,17 @@ const settingsFilePath = path.join(folderPath, 'settings.json')
 if(!fs.existsSync(folderPath)){
     fs.mkdirSync(folderPath)
 }
-
 if(!fs.existsSync(resultPath)){
     fs.mkdirSync(resultPath)
 }
+if(!fs.existsSync(resultDrinksPath)){
+    fs.mkdirSync(resultDrinksPath)
+}
 if(!fs.existsSync(resultModulePath)){
     fs.mkdirSync(resultModulePath)
+}
+if(!fs.existsSync(cardsPath)){
+    fs.mkdirSync(cardsPath)
 }
 if(!fs.existsSync(signsFilePath)){
     fs.mkdirSync(signsFilePath)
@@ -126,4 +133,4 @@ const meses = [
     {id: 12, name: 'Diciembre'},
     ]
 
-module.exports = { folderPath, resultPath, settingsFilePath, resultModulePath, meses, getSettings, getBuffer, saveSettings }
+module.exports = { folderPath, resultPath, resultDrinksPath, cardsPath, settingsFilePath, resultModulePath, meses, getSettings, getBuffer, saveSettings }
