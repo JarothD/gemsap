@@ -4,10 +4,9 @@ import wss from '../../config/wss'
 import Swal from 'sweetalert2'
 import NavMenu from '../util/NavMenu';
 
+const CargueMasivoBebidas = () => {
 
-const CargueMasivo = () => {
-
-    const actualPage = 'AlimentosMasivo'
+    const actualPage = 'BebidasMasivo'
 
     wss.onmessage = (event) => {
         //console.log(event.data)
@@ -111,17 +110,13 @@ const CargueMasivo = () => {
     }
 
     return ( 
-    <div
-        id='crear-certificado'>
-            <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px"></img>
-        <form 
-            autoComplete='off'
-            onSubmit={onSubmit} 
+    <div id='crear-certificado'>
+        <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px"></img>
+        <form
             id='form-certificado'>
-            {/* <Link to='/'>Cargue Individual</Link> */}
-            <NavMenu actualPage={actualPage}/>
-            <div id='contenedor-titulo'>
-                <h3><strong>Certificado Grupal</strong></h3>
+                <NavMenu actualPage={actualPage}/>
+                <div id='contenedor-titulo'>
+                <h3><strong>Bebidas Grupal</strong></h3>
             </div>
             <div id='contenedor-form'>
                 <label>
@@ -150,10 +145,9 @@ const CargueMasivo = () => {
                 />
             </div>
             <button id='boton-form' type='submit'>Certificar</button>
-            {/* // Añadir "PISTA" de archivo excel */}
         </form>
-    </div> 
+    </div>  
     );
 }
  
-export default CargueMasivo;
+export default CargueMasivoBebidas;

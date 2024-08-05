@@ -8,8 +8,25 @@
   display: absolute;  
 }
 
+
+
 #buttons-container {
   display: flex;
-  align-items: center;
   
+  align-items: center;
+  /* white-space: nowrap;
+  overflow-x: scroll; */
+  overflow-x: auto;
+  width: 80%;
+  padding-bottom: 0.3rem;
+  border-radius: 1rem;
+}
+
+
+
+h3 {
+  font-size: 1.6rem;
+  font-weight: bolder;
+  margin: 0;
+  user-select: none;
 }

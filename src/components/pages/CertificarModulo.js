@@ -6,9 +6,12 @@ import wss from '../../config/wss'
 import Swal from 'sweetalert2'
 import Signature from '../../assets/signature.svg'
 import { cargueModular } from '../util/DocxToPdf';
+import NavMenu from '../util/NavMenu';
 
 
 const CertificarModulo = () => {
+
+    const actualPage = 'CertificarModulo'
 
     wss.onmessage = (event) => {
         //console.log(event.data)
@@ -116,18 +119,8 @@ const CertificarModulo = () => {
             id='form-certificado'
             autoComplete='off'
             onSubmit={onSubmit}>
-            <div id='buttons-container'>
-                <Link to='/'>
-                    <img id='logo-principal' src={User} />                
-                </Link>
-                <Link to='/carguemasivo'>
-                    <img id='logo-principal' src={UserGroup} />                
-                </Link>
-                <Link to='/firma'>
-                    <img id='logo-principal' src={Signature} />                
-                </Link>
-            </div>
-            <div id='contenedor-form'>
+            {<NavMenu actualPage={actualPage}/>}
+            <div id='contenedor-titulo'>
                         <h3><strong>Certificado Modular</strong></h3>
             </div>
             <div id='contenedor-form'>
@@ -139,6 +132,7 @@ const CertificarModulo = () => {
                     name='nombreEmpresa'
                     onChange={onChange}
                     value={datos.nombreEmpresa}
+                    autoComplete='off'
                     type='text'
                 />
             </div>
@@ -150,6 +144,7 @@ const CertificarModulo = () => {
                 id='input-form'
                 name='modulo'
                 onChange={onChange}
+                autoComplete='off'
                 value={datos.modulo}
                 >
                     <option>1</option>
@@ -166,6 +161,7 @@ const CertificarModulo = () => {
                     id='input-form'
                     name='fecha'
                     value={datos.fecha}
+                    autoComplete='off'
                     onChange={onChange}
                     type='date'
                 />

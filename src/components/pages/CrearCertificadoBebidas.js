@@ -1,16 +1,9 @@
 import React, { useState } from 'react'
-import { llenarDocx } from '../util/DocxToPdf'
-import Swal from 'sweetalert2'
-import { Link } from 'react-router-dom'
-import UserGroup from '../../assets/usergroup.svg'
-import Module from '../../assets/module.svg'
-import Signature from '../../assets/signature.svg'
-import NavMenu from '../util/NavMenu'
+import NavMenu from '../util/NavMenu';
 
-const CrearCertificado = () => {
+const CrearCertificadoBebidas = () => {
+    const actualPage = 'bebidas'
 
-    const actualPage = 'CertificarAlimentos'
-    
     let fechaActual = new Date()
     let anio = fechaActual.getFullYear(),
         mes = fechaActual.getMonth() + 1,
@@ -29,7 +22,6 @@ const CrearCertificado = () => {
         cc:'',
         fecha: format
     })
-    
 
     const onSubmit = async e => {
         e.preventDefault();        
@@ -90,32 +82,27 @@ const CrearCertificado = () => {
                   } 
             })
         }
-         
-        
-        
     }
+
     const onChange = e => {        
         setDatos({
             ...datos,
             [e.target.name]: e.target.value
         })        
     }
-   
 
-    return (
-        <div 
-            id='crear-certificado'>        
-                    <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px"></img>
-            <form
-                onSubmit={onSubmit}
-                autoComplete='off'
-                id='form-certificado'>
-                    {/* <h2>Crear Certificado</h2> */}
-                    {<NavMenu actualPage={actualPage}/>}
-                    <div id='contenedor-titulo'>
-                        <h3><strong>Certificado Individual</strong></h3>
-                    </div>
-                    <div id='contenedor-form'>
+    return ( 
+    <div id='crear-certificado'>
+        <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px"></img>
+        <form
+            onSubmit={onSubmit}
+            autoComplete='off'
+            id='form-certificado'>
+                <NavMenu actualPage={actualPage}/>
+                <div id='contenedor-titulo'>
+                    <h3><strong>Bebidas Individual</strong></h3>
+                </div>
+                <div id='contenedor-form'>
                         <label>
                             Nombres:
                         </label>
@@ -168,11 +155,10 @@ const CrearCertificado = () => {
                             autoComplete='off'
                         />
                     </div>
-                    
                     <button id='boton-form' type='submit'>Certificar</button>                    
-            </form>
-        </div>  
+        </form>
+    </div> 
     );
 }
  
-export default CrearCertificado;
+export default CrearCertificadoBebidas;

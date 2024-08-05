@@ -5,8 +5,11 @@ import UserGroup from '../../assets/usergroup.svg'
 import Module from '../../assets/module.svg'
 import { cambiarPerfil, obtenerPerfiles } from '../util/Signature';
 import Swal from 'sweetalert2';
+import NavMenu from '../util/NavMenu';
 
 const PerfilFirma = () => {
+
+    const actualPage = 'Firmas'
 
     const [ perfil, setPerfil ] = useState(2)
     const [ perfiles, setPerfiles ] = useState([])
@@ -41,19 +44,9 @@ const PerfilFirma = () => {
         <div id='crear-certificado'>
         <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px"></img>
         <form id='form-certificado' onSubmit={onSubmit}>
-            <div id='buttons-container'>
-                <Link to='/'>
-                    <img id='logo-principal' src={User} />                
-                </Link>
-                <Link to='/carguemasivo'>
-                    <img id='logo-principal' src={UserGroup} />                
-                </Link>
-                <Link to='/modulos'>
-                    <img id='logo-principal' src={Module} />                
-                </Link>
-            </div>
-            <div id='contenedor-form'>
-                <h3><strong>Cambiar Perfíl Firma</strong></h3>
+            {<NavMenu actualPage={actualPage} />}
+            <div id='contenedor-titulo'>
+                <h3 style={{textAlign: 'center'}}><strong>Cambiar Perfíl Firma</strong></h3>
             </div>
             <div id='contenedor-form'>
                 <label>

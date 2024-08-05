@@ -2,7 +2,7 @@
   "name": "gemsap",
   "description": "Creador de Certificados",
   "author": "Jarothi",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "private": true,
   "dependencies": {
     "@babel/cli": "^7.20.7",
@@ -27,6 +27,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.7.0",
+    "react-svg": "^16.1.34",
     "sweetalert2": "^11.7.0",
     "update-electron-app": "^2.0.1",
     "utf-8-validate": "^5.0.10",
