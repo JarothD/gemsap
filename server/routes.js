@@ -476,7 +476,7 @@ router.post('/carnets', async (req, res) => {
                 toFill[`aniov${i}`] = fechaDate.getFullYear() + 1 
                 
                 //Obtener Info                
-                await generateQr(QRTemplate(nombres + ' ' + apellidos, cc, `${toFill.dia}/${toFill.mesnum}/${toFill.aniov}`));
+                await generateQr(QRTemplate(nombres + ' ' + apellidos, cc, `${toFill[`dia${i}`]}/${toFill[`mes${i}`]}/${toFill[`aniov${i}`]}`));
                 const qrfile = fs.readFileSync('qr.png');
                 toFill[`qr${i}`] = {
                     _type: 'image',

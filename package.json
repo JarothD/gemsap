@@ -2,7 +2,7 @@
   "name": "gemsap",
   "description": "Creador de Certificados",
   "author": "Jarothi",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "dependencies": {
     "@babel/cli": "^7.20.7",
