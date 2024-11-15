@@ -1,4 +1,4 @@
-
+![Pantalla Principal](vistazo.png)
 # Gemsap Generator
 
 **Gemsap Generator** es una aplicación de escritorio diseñada para agilizar la generación de certificados y documentos relacionados para instituciones educativas y empresas. Con una interfaz intuitiva, permite crear documentos personalizados a partir de plantillas predefinidas, generando archivos en PDF con QR únicos y adaptables a diversas necesidades.  
