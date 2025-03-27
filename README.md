@@ -32,7 +32,7 @@ Antes de comenzar, asegúrate de tener instalado lo siguiente:
 ---
 
 ## Instalación y ejecución
-
+0. **Instala Ghostscript antes de continuar
 1. **Clona este repositorio**:
    ```bash
    git clone <url-del-repositorio>

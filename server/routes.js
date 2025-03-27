@@ -5,6 +5,8 @@ const QRCode = require('qrcode');
 const libre = require('libreoffice-convert');
 const { folderPath, resultPath, resultDrinksPath, cardsPath, meses, getSettings, getBuffer, resultModulePath, saveSettings } = require('./config/Data');
 const reader = require('xlsx');
+const { convertImagesToPDF, convertPDFToPNG } = require('./config/Ghostscript');
+const path = require('path');
 
 const router = express.Router();
 
@@ -249,7 +251,20 @@ router.post('/certificado', async (req, res) => {
 
         fs.writeFileSync(resultPath + "/" 
         + `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`, pdfBuf)
-        
+        // Guardar PDF en disco
+        const pdfFileName = `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`;
+        const pdfFilePath = path.join(resultPath, pdfFileName);
+        fs.writeFileSync(pdfFilePath, pdfBuf);
+
+        // Convertir PDF a imágenes PNG usando Ghostscript
+        const outputDir = path.join(resultPath, "images", path.parse(pdfFileName).name);
+        fs.mkdirSync(outputDir, { recursive: true });
+
+        const imagePaths = await convertPDFToPNG(pdfFilePath, outputDir);
+        console.log("Imágenes generadas:", imagePaths);
+        // Volver a convertir las imágenes en un PDF (si es necesario)
+        const finalPdfPath = path.join(resultPath, `final_${pdfFileName}`);
+        await convertImagesToPDF(imagePaths, finalPdfPath);
         res.status(200).json({msg: `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}${fechaDate.getFullYear()}-${cc}.pdf`})
 
         
