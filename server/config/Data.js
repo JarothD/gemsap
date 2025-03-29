@@ -1,3 +1,4 @@
+const os = require('os')
 const appModulePath = require('app-module-path')
 const path = require('path')
 const fs = require('fs')
@@ -6,7 +7,13 @@ appModulePath.addPath(`${__dirname}`)
 
 const totalPerfiles = 4;
 
-const folderPath = path.join('C:', 'Gemsap')
+// Detectar el sistema operativo y configurar las rutas
+const isWindows = process.platform === 'win32';
+
+const folderPath = isWindows 
+    ? path.join('C:', 'Gemsap') // Ruta para Windows
+    : path.join(os.homedir(), 'gemsap'); // Ruta para Linux
+
 const resultPath = path.join(folderPath, 'Certificados')
 const resultDrinksPath = path.join(folderPath, 'Bebidas')
 const cardsPath = path.join(folderPath, 'Carnets')
@@ -14,33 +21,34 @@ const resultModulePath = path.join(folderPath, 'Modulos')
 const signsFilePath = path.join(folderPath, 'Firmas')
 const settingsFilePath = path.join(folderPath, 'settings.json')
 
-if(!fs.existsSync(folderPath)){
+// Crear directorios si no existen
+if (!fs.existsSync(folderPath)) {
     fs.mkdirSync(folderPath)
 }
-if(!fs.existsSync(resultPath)){
+if (!fs.existsSync(resultPath)) {
     fs.mkdirSync(resultPath)
 }
-if(!fs.existsSync(resultDrinksPath)){
+if (!fs.existsSync(resultDrinksPath)) {
     fs.mkdirSync(resultDrinksPath)
 }
-if(!fs.existsSync(resultModulePath)){
+if (!fs.existsSync(resultModulePath)) {
     fs.mkdirSync(resultModulePath)
 }
-if(!fs.existsSync(cardsPath)){
+if (!fs.existsSync(cardsPath)) {
     fs.mkdirSync(cardsPath)
 }
-if(!fs.existsSync(signsFilePath)){
+if (!fs.existsSync(signsFilePath)) {
     fs.mkdirSync(signsFilePath)
     for (let i = 0; i < totalPerfiles; i++) {
         const profilePath = path.join(signsFilePath, 'Perfil ' + (i + 1))
         fs.mkdirSync(profilePath)
-    }    
+    }
 }
 
-if(!fs.existsSync(settingsFilePath)) {
+if (!fs.existsSync(settingsFilePath)) {
     const defaultSettings = {
         nombreFirma: 'POR CAMBIAR Y/O REMOVER',
-        pathFirmaGemsap: path.join(folderPath, 'Firma.png'), //Firma Default o de Carnét
+        pathFirmaGemsap: path.join(folderPath, 'Firma.png'), // Firma Default o de Carnét
         tituloFirma: 'POR CAMBIAR Y/O REMOVER',
         firmaSeleccionada: 2,
         modulos: [
@@ -48,12 +56,12 @@ if(!fs.existsSync(settingsFilePath)) {
                 modulo: 1,
                 temas: 'Los Alimentos y los microorganismos- Seguridad de los alimentos- Buenas prácticas de manufactura',
                 horas: 10
-            }, 
+            },
             {
                 modulo: 2,
                 temas: 'Higiene alimentaria - Seguridad en la cocina - Control de contaminantes',
                 horas: 10
-            }, 
+            },
             {
                 modulo: 3,
                 temas: 'Conservación de alimentos - Cadena de frío - Almacenamiento adecuado',
@@ -117,20 +125,19 @@ const getBuffer = (path) => {
     return fs.readFileSync(path)
 }
 
-
 const meses = [
-    {id: 1, name: 'Enero'}, 
-    {id: 2, name: 'Febrero'},
-    {id: 3, name: 'Marzo'},
-    {id: 4, name: 'Abril'},
-    {id: 5, name: 'Mayo'},
-    {id: 6, name: 'Junio'},
-    {id: 7, name: 'Julio'},
-    {id: 8, name: 'Agosto'},
-    {id: 9, name: 'Septiembre'},
-    {id: 10, name: 'Octubre'},
-    {id: 11, name: 'Noviembre'},
-    {id: 12, name: 'Diciembre'},
-    ]
+    { id: 1, name: 'Enero' },
+    { id: 2, name: 'Febrero' },
+    { id: 3, name: 'Marzo' },
+    { id: 4, name: 'Abril' },
+    { id: 5, name: 'Mayo' },
+    { id: 6, name: 'Junio' },
+    { id: 7, name: 'Julio' },
+    { id: 8, name: 'Agosto' },
+    { id: 9, name: 'Septiembre' },
+    { id: 10, name: 'Octubre' },
+    { id: 11, name: 'Noviembre' },
+    { id: 12, name: 'Diciembre' },
+]
 
 module.exports = { folderPath, resultPath, resultDrinksPath, cardsPath, settingsFilePath, resultModulePath, meses, getSettings, getBuffer, saveSettings }

@@ -2,8 +2,13 @@ const { exec } = require("child_process");
 const path = require("path");
 const fs = require('fs');
 const libre = require('libreoffice-convert'); // Asegúrate de que libreoffice-convert esté instalado
-const GS_CMD = process.arch.includes("64") ? "gswin64c" : "gswin32c";
 const { PDFDocument } = require('pdf-lib'); // Asegúrate de instalar pdf-lib
+
+// Detectar el sistema operativo y configurar el comando de Ghostscript
+const isWindows = process.platform === 'win32';
+const GS_CMD = isWindows 
+    ? (process.arch.includes("64") ? "gswin64c" : "gswin32c") // Comando para Windows
+    : "gs"; // Comando para Linux
 
 /**
  * Verifica si Ghostscript está instalado y funcionando
