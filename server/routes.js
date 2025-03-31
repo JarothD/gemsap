@@ -75,16 +75,10 @@ router.post('/modulos', async (req, res) => {
         const clientsSheet = plantillaX.Sheets['data'];
         const dataClient = reader.utils.sheet_to_json(clientsSheet);
 
-        // Crear objeto toFill una vez fuera del bucle
-        //const fechaDate = new Date(fecha);
-        //const mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
+        // Crear objeto toFill una vez fuera del bucle        
         const chosenModule = modulos.find(toFind => toFind.modulo == modulo)
         
         const toFillBase = {
-            /* dia: fechaDate.getUTCDate(),
-            mes: mesName,
-            mesnum: fechaDate.getUTCMonth() + 1,
-            anio: fechaDate.getFullYear(),   */          
             nombreFirma,
             tituloFirma,
             tarjetaProfesional,
@@ -109,12 +103,8 @@ router.post('/modulos', async (req, res) => {
 
         for (const client of dataClient) {
             let { nombres, cc } = client;
-
             nombres = nombres.toUpperCase();
-            //apellidos = apellidos.toUpperCase();
-            
             let nombresSplitted = nombres.split(' ');
-            //let apellidosSplitted = apellidos.split(' ');
             let fechaDate = new Date(fecha);
             let mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
             if(client.fecha){
@@ -123,7 +113,6 @@ router.post('/modulos', async (req, res) => {
                 mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
             }
             
-
             let toFill = {
                 ...toFillBase,
                 dia: fechaDate.getUTCDate(),
@@ -136,9 +125,7 @@ router.post('/modulos', async (req, res) => {
             };
 
             await generateQr(QRTemplateModule(nombres + ' ', cc, `${toFill.dia}/${toFill.mesnum}/${toFill.anio}`, chosenModule.modulo));
-
             const qrfile = fs.readFileSync('qr.png');
-
             const doc = await handler.process(file, {
                 ...toFill,                
                 qr: {
@@ -150,9 +137,7 @@ router.post('/modulos', async (req, res) => {
                 }
             });
             const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
-            
             fs.writeFileSync(`${resultModulePath}/${nombreEmpresa}/M${modulo}_${nombresSplitted[0]}_${toFill.mesnum}_${toFill.anio}_${cc}.pdf`, pdfBuf);
-            
             contador++;
             global.send(contador + ' de ' + dataClient.length);
         }
@@ -226,8 +211,7 @@ router.post('/certificado', async (req, res) => {
                     headerExtension 
                 ]
             }
-        }); 
-             
+        });   
         
         let file = fs.readFileSync(folderPath + "/" + filename);
         let qrfile = fs.readFileSync("qr.png")
@@ -249,24 +233,39 @@ router.post('/certificado', async (req, res) => {
         
         let pdfBuf = await libre.convertAsync(doc, '.pdf', undefined)
 
-        fs.writeFileSync(resultPath + "/" 
-        + `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`, pdfBuf)
         // Guardar PDF en disco
-        const pdfFileName = `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`;
+        const pdfFileName = `CMA_${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`;
         const pdfFilePath = path.join(resultPath, pdfFileName);
         fs.writeFileSync(pdfFilePath, pdfBuf);
 
         // Convertir PDF a imágenes PNG usando Ghostscript
-        const outputDir = path.join(resultPath, "images", path.parse(pdfFileName).name);
+        const outputDir = path.join(resultPath, "images");
         fs.mkdirSync(outputDir, { recursive: true });
 
         const imagePaths = await convertPDFToPNG(pdfFilePath, outputDir);
         console.log("Imágenes generadas:", imagePaths);
-        // Volver a convertir las imágenes en un PDF (si es necesario)
-        const finalPdfPath = path.join(resultPath, `final_${pdfFileName}`);
-        await convertImagesToPDF(imagePaths, finalPdfPath);
-        res.status(200).json({msg: `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}${fechaDate.getFullYear()}-${cc}.pdf`})
 
+        // Sobrescribir el archivo PDF original con las imágenes convertidas
+        await convertImagesToPDF(imagePaths, pdfFilePath);
+
+        // Eliminar las imágenes generadas
+        for (const imagePath of imagePaths) {
+            try {
+                fs.unlinkSync(imagePath);
+            } catch (err) {
+                console.error(`Error al eliminar la imagen ${imagePath}:`, err);
+            }
+        }
+
+        // Intentar eliminar la carpeta de imágenes
+        try {
+            fs.rmdirSync(outputDir, { recursive: true });
+            console.log(`Carpeta ${outputDir} eliminada correctamente.`);
+        } catch (err) {
+            console.error(`Error al eliminar la carpeta ${outputDir}:`, err);
+        }
+
+        res.status(200).json({ msg: `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}${fechaDate.getFullYear()}-${cc}.pdf` });
         
         
     } catch (error) {
@@ -363,12 +362,40 @@ router.post('/bebidas', async (req, res) => {
         }})
         
         
-        let pdfBuf = await libre.convertAsync(doc, '.pdf', undefined)
+        let pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
 
-        fs.writeFileSync(resultDrinksPath + "/" 
-        + `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`, pdfBuf)
-        
-        res.status(200).json({msg: `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}${fechaDate.getFullYear()}-${cc}.pdf`})
+        // Guardar PDF en disco
+        const pdfFileName = `CMB_${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`;
+        const pdfFilePath = path.join(resultDrinksPath, pdfFileName);
+        fs.writeFileSync(pdfFilePath, pdfBuf);
+
+        // Convertir PDF a imágenes PNG usando Ghostscript
+        const outputDir = path.join(resultDrinksPath, "images");
+        fs.mkdirSync(outputDir, { recursive: true });
+
+        const imagePaths = await convertPDFToPNG(pdfFilePath, outputDir);
+        console.log("Imágenes generadas:", imagePaths);
+
+        // Sobrescribir el archivo PDF original con las imágenes convertidas
+        await convertImagesToPDF(imagePaths, pdfFilePath);
+         // Eliminar las imágenes generadas
+         for (const imagePath of imagePaths) {
+            try {
+                fs.unlinkSync(imagePath);
+            } catch (err) {
+                console.error(`Error al eliminar la imagen ${imagePath}:`, err);
+            }
+        }
+
+        // Intentar eliminar la carpeta de imágenes
+        try {
+            fs.rmdirSync(outputDir, { recursive: true });
+            console.log(`Carpeta ${outputDir} eliminada correctamente.`);
+        } catch (err) {
+            console.error(`Error al eliminar la carpeta ${outputDir}:`, err);
+        }
+
+        res.status(200).json({msg: `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}${fechaDate.getFullYear()}-${cc}.pdf`});
 
         
         
@@ -509,7 +536,6 @@ router.post('/carnets', async (req, res) => {
             fs.writeFileSync(`${cardsPath}/${nombreEmpresa}/Paquete${index}.pdf`, pdfBuf);
             //console.log(toFill)
             //Generar Documento
-
         }
 
 
@@ -527,11 +553,8 @@ router.post('/carguemasivo', async (req, res) => {
     // El código de tu ruta /carguemasivo
     try {
         const { nombreEmpresa, fecha } = req.body;
-
-        const { pathFirmaGemsap, firmaSeleccionada, firmas } = getSettings()
-
-        const { nombreFirma, tituloFirma, tarjetaProfesional, pathFirma } = firmas.find(fir => fir.firma === firmaSeleccionada)
-
+        const { pathFirmaGemsap, firmaSeleccionada, firmas } = getSettings();
+        const { nombreFirma, tituloFirma, tarjetaProfesional, pathFirma } = firmas.find(fir => fir.firma === firmaSeleccionada);
 
         const filenameDocx = 'PlantillaSimple.docx';
         const filenameXlsx = 'Cargue_Masivo.xlsx';
@@ -545,7 +568,6 @@ router.post('/carguemasivo', async (req, res) => {
         const dataClient = reader.utils.sheet_to_json(clientsSheet);
 
         // Crear objeto toFill una vez fuera del bucle
-        
         
         const toFillBase = {
             
@@ -712,7 +734,8 @@ router.post('/masivobebidas', async (req, res) => {
                 mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
             }
             
-            let toFill = {
+ 
+           let toFill = {
                 ...toFillBase,
                 dia: fechaDate.getUTCDate(),
                 mes: mesName,
