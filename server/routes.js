@@ -137,7 +137,22 @@ router.post('/modulos', async (req, res) => {
                 }
             });
             const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
-            fs.writeFileSync(`${resultModulePath}/${nombreEmpresa}/M${modulo}_${nombresSplitted[0]}_${toFill.mesnum}_${toFill.anio}_${cc}.pdf`, pdfBuf);
+            //fs.writeFileSync(`${resultModulePath}/${nombreEmpresa}/M${modulo}_${nombresSplitted[0]}_${toFill.mesnum}_${toFill.anio}_${cc}.pdf`, pdfBuf);
+            // Guardar PDF en disco
+            const pdfFileName = `${nombreEmpresa}/M${modulo}_${nombresSplitted[0]}_${toFill.mesnum}_${toFill.anio}_${cc}.pdf`;
+            const pdfFilePath = path.join(resultModulePath, pdfFileName);
+            fs.writeFileSync(pdfFilePath, pdfBuf);
+
+            // Convertir PDF a imágenes PNG usando Ghostscript
+            const outputDir = path.join(resultModulePath, "images");
+            fs.mkdirSync(outputDir, { recursive: true });
+
+            const imagePaths = await convertPDFToPNG(pdfFilePath, outputDir);
+            console.log("Imágenes generadas:", imagePaths);
+
+            // Sobrescribir el archivo PDF original con las imágenes convertidas
+            await convertImagesToPDF(imagePaths, pdfFilePath);
+
             contador++;
             global.send(contador + ' de ' + dataClient.length);
         }
@@ -502,8 +517,8 @@ router.post('/carnets', async (req, res) => {
                 
                 let nombresSplitted = nombres.split(' ');
                 let apellidosSplitted = apellidos.split(' ');
-/*                 let fechaDate = new Date(fecha);
-                let mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name; */
+                let fechaDate = new Date();
+                let mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
                 if(paquetes[index][i].fecha){
                     let nuevaFecha = cambiarFormatoFecha(fecha)
                     fechaDate = new Date(nuevaFecha);
@@ -533,9 +548,36 @@ router.post('/carnets', async (req, res) => {
             const doc = await handler.process(file, {...toFill})
             console.log(toFill)
             const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
-            fs.writeFileSync(`${cardsPath}/${nombreEmpresa}/Paquete${index}.pdf`, pdfBuf);
-            //console.log(toFill)
-            //Generar Documento
+            //fs.writeFileSync(`${cardsPath}/${nombreEmpresa}/Paquete${index}.pdf`, pdfBuf);
+            // Guardar PDF en disco
+            const pdfFileName = `${nombreEmpresa}/Paquete${index}.pdf`;
+            const pdfFilePath = path.join(cardsPath, pdfFileName);
+            fs.writeFileSync(pdfFilePath, pdfBuf);
+
+            // Convertir PDF a imágenes PNG usando Ghostscript
+            const outputDir = path.join(resultDrinksPath, "images");
+            fs.mkdirSync(outputDir, { recursive: true });
+
+            const imagePaths = await convertPDFToPNG(pdfFilePath, outputDir);
+            console.log("Imágenes generadas:", imagePaths);
+
+            // Sobrescribir el archivo PDF original con las imágenes convertidas
+            await convertImagesToPDF(imagePaths, pdfFilePath);
+            for (const imagePath of imagePaths) {
+                try {
+                    fs.unlinkSync(imagePath);
+                } catch (err) {
+                    console.error(`Error al eliminar la imagen ${imagePath}:`, err);
+                }
+            }
+    
+            // Intentar eliminar la carpeta de imágenes
+            try {
+                fs.rmdirSync(outputDir, { recursive: true });
+                console.log(`Carpeta ${outputDir} eliminada correctamente.`);
+            } catch (err) {
+                console.error(`Error al eliminar la carpeta ${outputDir}:`, err);
+            }
         }
 
 
@@ -652,8 +694,39 @@ router.post('/carguemasivo', async (req, res) => {
 
             const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
             
-            fs.writeFileSync(`${resultPath}/${nombreEmpresa}/${apellidosSplitted[0]}_${nombresSplitted[0]}_${toFill.mesnum}_${toFill.anio}_${cc}.pdf`, pdfBuf);
-            
+            //fs.writeFileSync(`${resultPath}/${nombreEmpresa}/${apellidosSplitted[0]}_${nombresSplitted[0]}_${toFill.mesnum}_${toFill.anio}_${cc}.pdf`, pdfBuf);
+            // Guardar PDF en disco
+            const pdfFileName = `${nombreEmpresa}/CMA_${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`;
+            const pdfFilePath = path.join(resultPath, pdfFileName);
+            fs.writeFileSync(pdfFilePath, pdfBuf);
+
+            // Convertir PDF a imágenes PNG usando Ghostscript
+            const outputDir = path.join(resultPath, "images");
+            fs.mkdirSync(outputDir, { recursive: true });
+
+            const imagePaths = await convertPDFToPNG(pdfFilePath, outputDir);
+            console.log("Imágenes generadas:", imagePaths);
+
+            // Sobrescribir el archivo PDF original con las imágenes convertidas
+            await convertImagesToPDF(imagePaths, pdfFilePath);
+
+            // Eliminar las imágenes generadas
+         for (const imagePath of imagePaths) {
+            try {
+                fs.unlinkSync(imagePath);
+            } catch (err) {
+                console.error(`Error al eliminar la imagen ${imagePath}:`, err);
+            }
+        }
+
+        // Intentar eliminar la carpeta de imágenes
+        try {
+            fs.rmdirSync(outputDir, { recursive: true });
+            console.log(`Carpeta ${outputDir} eliminada correctamente.`);
+        } catch (err) {
+            console.error(`Error al eliminar la carpeta ${outputDir}:`, err);
+        }
+
             contador++;
             global.send(contador + ' de ' + dataClient.length);
         }
@@ -774,7 +847,37 @@ router.post('/masivobebidas', async (req, res) => {
 
             const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
             
-            fs.writeFileSync(`${resultDrinksPath}/${nombreEmpresa}/${apellidosSplitted[0]}_${nombresSplitted[0]}_${toFill.mesnum}_${toFill.anio}_${cc}.pdf`, pdfBuf);
+            //fs.writeFileSync(`${resultDrinksPath}/${nombreEmpresa}/${apellidosSplitted[0]}_${nombresSplitted[0]}_${toFill.mesnum}_${toFill.anio}_${cc}.pdf`, pdfBuf);
+            // Guardar PDF en disco
+            const pdfFileName = `${nombreEmpresa}/CMB_${apellidosSplitted[0]}_${nombresSplitted[0]}_${toFill.mesnum}_${toFill.anio}_${cc}.pdf`;
+            const pdfFilePath = path.join(resultDrinksPath, pdfFileName);
+            fs.writeFileSync(pdfFilePath, pdfBuf);
+
+            // Convertir PDF a imágenes PNG usando Ghostscript
+            const outputDir = path.join(resultDrinksPath, "images");
+            fs.mkdirSync(outputDir, { recursive: true });
+
+            const imagePaths = await convertPDFToPNG(pdfFilePath, outputDir);
+            console.log("Imágenes generadas:", imagePaths);
+
+            // Sobrescribir el archivo PDF original con las imágenes convertidas
+            await convertImagesToPDF(imagePaths, pdfFilePath);
+            // Eliminar las imágenes generadas
+            for (const imagePath of imagePaths) {
+                try {
+                    fs.unlinkSync(imagePath);
+                } catch (err) {
+                    console.error(`Error al eliminar la imagen ${imagePath}:`, err);
+                }
+            }
+
+            // Intentar eliminar la carpeta de imágenes
+            try {
+                fs.rmdirSync(outputDir, { recursive: true });
+                console.log(`Carpeta ${outputDir} eliminada correctamente.`);
+            } catch (err) {
+                console.error(`Error al eliminar la carpeta ${outputDir}:`, err);
+            }
             
             contador++;
             global.send(contador + ' de ' + dataClient.length);
