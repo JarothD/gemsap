@@ -152,7 +152,22 @@ router.post('/modulos', async (req, res) => {
 
             // Sobrescribir el archivo PDF original con las imágenes convertidas
             await convertImagesToPDF(imagePaths, pdfFilePath);
+            // Eliminar las imágenes generadas
+            for (const imagePath of imagePaths) {
+                try {
+                    fs.unlinkSync(imagePath);
+                } catch (err) {
+                    console.error(`Error al eliminar la imagen ${imagePath}:`, err);
+                }
+            }
 
+            // Intentar eliminar la carpeta de imágenes
+            try {
+                fs.rmdirSync(outputDir, { recursive: true });
+                console.log(`Carpeta ${outputDir} eliminada correctamente.`);
+            } catch (err) {
+                console.error(`Error al eliminar la carpeta ${outputDir}:`, err);
+            }
             contador++;
             global.send(contador + ' de ' + dataClient.length);
         }
