@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
+import Swal from 'sweetalert2'
+
 import { cargueMasivo, cargueMasivoBebidas } from '../util/DocxToPdf';
 import wss from '../../config/wss'
-import Swal from 'sweetalert2'
 import NavMenu from '../util/NavMenu';
 
 const CargueMasivoBebidas = () => {

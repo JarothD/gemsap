@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import Swal from 'sweetalert2';
+
 import User from '../../assets/user.svg'
 import UserGroup from '../../assets/usergroup.svg'
 import Module from '../../assets/module.svg'
 import { cambiarPerfil, obtenerPerfiles } from '../util/Signature';
-import Swal from 'sweetalert2';
 import NavMenu from '../util/NavMenu';
 
 const PerfilFirma = () => {

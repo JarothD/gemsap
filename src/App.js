@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
-import './App.css';
-
 import { HashRouter, Route, Routes} from 'react-router-dom';
+import './App.css';
 
 import CrearCertificado from './components/pages/CrearCertificado';
 import CargueMasivo from './components/pages/CargueMasivo';

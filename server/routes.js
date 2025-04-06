@@ -1,12 +1,15 @@
-const express = require('express');
 const fs = require('fs');
+const path = require('path');
+
+const express = require('express');
 const { TemplateHandler, TemplateExtension, MimeType } = require('easy-template-x');
 const QRCode = require('qrcode');
 const libre = require('libreoffice-convert');
-const { folderPath, resultPath, resultDrinksPath, cardsPath, meses, getSettings, getBuffer, resultModulePath, saveSettings } = require('./config/Data');
 const reader = require('xlsx');
+
+const { folderPath, resultPath, resultDrinksPath, cardsPath, meses, getSettings, getBuffer, resultModulePath, saveSettings } = require('./config/Data');
 const { convertImagesToPDF, convertPDFToPNG } = require('./config/Ghostscript');
-const path = require('path');
+
 
 const router = express.Router();
 

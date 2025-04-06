@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { llenarDocx } from '../util/DocxToPdf'
 import Swal from 'sweetalert2'
 import { Link } from 'react-router-dom'
+
+import { llenarDocx } from '../util/DocxToPdf'
 import UserGroup from '../../assets/usergroup.svg'
 import Module from '../../assets/module.svg'
 import Signature from '../../assets/signature.svg'

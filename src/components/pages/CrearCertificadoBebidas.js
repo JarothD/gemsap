@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
+import Swal from 'sweetalert2';
+
 import NavMenu from '../util/NavMenu';
 import { llenarDocx } from '../util/DocxToPdf';
-import Swal from 'sweetalert2';
 
 const CrearCertificadoBebidas = () => {
     const actualPage = 'bebidas'

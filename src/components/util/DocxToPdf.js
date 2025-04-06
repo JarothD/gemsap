@@ -1,5 +1,6 @@
-import { clienteAxios } from "../../config/axios";
 import Swal from 'sweetalert2'
+
+import { clienteAxios } from "../../config/axios";
 
 export async function llenarDocx(data, type){            
     try {        

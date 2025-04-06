@@ -19,10 +19,10 @@ Además, ofrece la posibilidad de gestionar las firmas electrónicas de manera c
 ---
 
 ## Requisitos previos
-
+Este proyecto nació en Node 16.
 Antes de comenzar, asegúrate de tener instalado lo siguiente:
 
-- **Node.js** (versión 16 o superior).
+- **Node.js** (versión 20 LTS).
 - **Yarn**: Para instalarlo globalmente, usa el siguiente comando:  
   ```bash
   npm i -g yarn

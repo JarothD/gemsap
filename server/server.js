@@ -1,14 +1,16 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 
 const http = require('http')
+//const fs = require('fs')
+
 const express = require('express')
 const cors = require('cors')
-const fs = require('fs')
-const { TemplateHandler, TemplateExtension, MimeType } = require('easy-template-x')
-const { checkGhostscript } = require('./config/Ghostscript')
-
-const routes = require('./routes');
+//const { TemplateHandler, TemplateExtension, MimeType } = require('easy-template-x')
 const libre = require('libreoffice-convert');
-const { folderPath, resultPath } = require('./config/Data')
+
+const { checkGhostscript } = require('./config/Ghostscript')
+const routes = require('./routes');
+//const { folderPath, resultPath } = require('./config/Data')
 libre.convertAsync = require('util').promisify(libre.convert);
 require('./config/WebSocket')
 
@@ -33,6 +35,7 @@ process.on('uncaughtException', (err) => {
       });
     } catch (error) {
       console.error("Error: Ghostscript no está disponible. El servidor no se iniciará.");
+      console.error(error);
       process.exit(1); // Detener la ejecución si Ghostscript no funciona
     }
   }

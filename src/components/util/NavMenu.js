@@ -1,4 +1,7 @@
 import React, { useEffect, useRef } from 'react';
+import { ReactSVG } from 'react-svg';
+import { Link, useLocation } from 'react-router-dom';
+
 import User from '../../assets/user.svg';
 import Module from '../../assets/module.svg';
 import Signature from '../../assets/signature.svg';
@@ -6,8 +9,6 @@ import UserGroup from '../../assets/usergroup.svg';
 import Champagne from '../../assets/champagne-glasses.svg';
 import Identification from '../../assets/id-card.svg';
 import Martini from '../../assets/martini-glass.svg';
-import { ReactSVG } from 'react-svg';
-import { Link, useLocation } from 'react-router-dom';
 
 const NavMenu = ({ actualPage }) => {
   const containerRef = useRef(null);

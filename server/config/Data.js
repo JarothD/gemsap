@@ -1,7 +1,8 @@
 const os = require('os')
-const appModulePath = require('app-module-path')
 const path = require('path')
 const fs = require('fs')
+
+const appModulePath = require('app-module-path')
 
 appModulePath.addPath(`${__dirname}`)
 
