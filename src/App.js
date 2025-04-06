@@ -1,5 +1,5 @@
-import React, { Component } from 'react';
-import { HashRouter, Route, Routes} from 'react-router-dom';
+import React from 'react';
+import { createHashRouter, RouterProvider } from 'react-router-dom';
 import './App.css';
 
 import CrearCertificado from './components/pages/CrearCertificado';
@@ -10,27 +10,44 @@ import CrearCertificadoBebidas from './components/pages/CrearCertificadoBebidas'
 import CargueMasivoBebidas from './components/pages/CargueMasivoBebidas';
 import Carnets from './components/pages/Carnets';
 
-
-class App extends Component {
-  render() {
-    return (
-      
-          <HashRouter>
-        <div className="App">
-          <Routes>
-            <Route path='/' element={<CrearCertificado />} />
-            <Route path='/carguemasivo' element={<CargueMasivo />} />            
-            <Route path='/modulos' element={<CertificarModulo />} />
-            <Route path='/bebidas' element={<CrearCertificadoBebidas />} />
-            <Route path='/bebidasmasivo' element={<CargueMasivoBebidas />} />
-            <Route path='/carnets' element={<Carnets />} />
-            <Route path='/firma' element={<PerfilFirma />} />
-          </Routes>
-        </div>
-          </HashRouter>          
-      
-    );
+const router = createHashRouter([
+  {
+    path: '/',
+    element: <CrearCertificado />,
+  },
+  {
+    path: '/carguemasivo',
+    element: <CargueMasivo />,
+  },
+  {
+    path: '/modulos',
+    element: <CertificarModulo />,
+  },
+  {
+    path: '/bebidas',
+    element: <CrearCertificadoBebidas />,
+  },
+  {
+    path: '/bebidasmasivo',
+    element: <CargueMasivoBebidas />,
+  },
+  {
+    path: '/carnets',
+    element: <Carnets />,
+  },
+  {
+    path: '/firma',
+    element: <PerfilFirma />,
   }
+], {
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true
+  }
+});
+
+function App() {
+  return <RouterProvider router={router} />;
 }
 
 export default App;

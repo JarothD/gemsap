@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Swal from 'sweetalert2'
 import { Link } from 'react-router-dom'
 
@@ -12,6 +12,29 @@ const CrearCertificado = () => {
 
     const actualPage = 'CertificarAlimentos'
     
+    // Inicializar el servidor cuando el componente se monta
+    useEffect(() => {
+        if (window.electronAPI) {
+            window.electronAPI.startServer();
+            
+            const serverStatusHandler = (message) => {
+                // Proper handling of status object
+                if (message.type === 'error') {
+                    console.error('Server error:', message.message);
+                } else {
+                    console.log('Server status:', message.message);
+                }
+            };
+            
+            window.electronAPI.onServerStatus(serverStatusHandler);
+            
+            // Add cleanup
+            return () => {
+                window.electronAPI.startServer('stop'); // Signal server to stop
+            };
+        }
+    }, []); // Se ejecuta solo una vez al montar el componente
+
     let fechaActual = new Date()
     let anio = fechaActual.getFullYear(),
         mes = fechaActual.getMonth() + 1,

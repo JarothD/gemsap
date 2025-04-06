@@ -49,6 +49,16 @@ wsServer.on('connection', (socket) => {
     setupConnection(socket);
 });
 
+// Agregar método para cerrar el servidor WebSocket
+const closeWebSocketServer = () => {
+    if (wsServer) {
+        wsServer.close(() => {
+            console.log('WebSocket server closed');
+        });
+    }
+};
+
 module.exports = {
-    send: global.send
+    send: global.send,
+    closeWebSocketServer
 };

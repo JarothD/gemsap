@@ -52,6 +52,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^16.0.0",
     "prettier": "^2.8.3",
+    "react-devtools": "^6.1.1",
     "react-scripts": "5.0.1",
     "wait-on": "7.0.1"
   },
@@ -82,7 +83,8 @@
     "electron-dev": "node scripts/dev.js scripts/start.js",
     "electron-pack": "yarn electron-builder -c.extraMetadata.main='./main.js'",
     "preelectron-pack": "yarn react-build && yarn server-build",
-    "start": "concurrently \"cross-env BROWSER=none yarn react-start\" \"yarn server-start\" \"wait-on http://localhost:3000 && yarn electron-dev \""
+    "clean": "node scripts/clean-ports.js",
+    "start": "yarn clean && concurrently \"react-devtools\" \"node scripts/dev-server.js\""
   },
   "browserslist": {
     "production": [
