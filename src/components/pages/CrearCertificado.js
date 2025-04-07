@@ -18,9 +18,9 @@ const CrearCertificado = () => {
             window.electronAPI.startServer();
             
             const serverStatusHandler = (message) => {
-                // Proper handling of status object
                 if (message.type === 'error') {
                     console.error('Server error:', message.message);
+                    // Aquí podrías agregar lógica para reintentar o notificar al usuario
                 } else {
                     console.log('Server status:', message.message);
                 }

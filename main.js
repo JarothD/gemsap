@@ -6,6 +6,7 @@ const isDev = require("electron-is-dev");
 
 let mainWindow;
 let server; // Referencia al servidor
+let serverProcess; // Add this at the top with other declarations
 
 async function createWindow() {
   // Set custom cache path before creating window
@@ -44,10 +45,10 @@ async function createWindow() {
       webSecurity: true,
       preload: path.join(__dirname, "preload.js"),
       enableRemoteModule: false,
-      // Only disable security features in development
+      // Configurar seguridad para desarrollo
       ...(isDev && {
-        webSecurity: false,
-        allowRunningInsecureContent: true
+        allowRunningInsecureContent: false, // Mantener seguridad
+        webSecurity: true // Mantener seguridad
       })
     }
   });
@@ -84,23 +85,17 @@ async function createWindow() {
     console.log('Console message:', message);
   });
 
-  // Agregar CSP seguro
+  // Configurar CSP apropiado
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [isDev ? 
-          "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:8097; " +
-          "style-src 'self' 'unsafe-inline'; " +
-          "img-src 'self' https://gemsap.com data:; " +
+        'Content-Security-Policy': [
+          "default-src 'self';" +
+          "script-src 'self' 'unsafe-inline' http://localhost:*;" +
+          "style-src 'self' 'unsafe-inline';" +
+          "img-src 'self' https://gemsap.com data:;" +
           "connect-src 'self' ws://localhost:* http://localhost:*;"
-          :
-          "default-src 'self'; " +
-          "script-src 'self'; " +
-          "style-src 'self' 'unsafe-inline'; " +
-          "img-src 'self' https://gemsap.com; " +
-          "connect-src 'self' ws://localhost:3002 http://localhost:9001;"
         ]
       }
     });
@@ -168,9 +163,9 @@ ipcMain.on('startServer', (event) => {
 });
 
 ipcMain.on('start-server', async (event) => {
-  if (isDev) {
+  if (isDev && !serverProcess) { // Check if server is not already running
     const { spawn } = require('child_process');
-    const serverProcess = spawn('yarn', ['server-start'], {
+    serverProcess = spawn('yarn', ['server-start'], {
       shell: true,
       stdio: 'pipe'
     });
@@ -183,9 +178,24 @@ ipcMain.on('start-server', async (event) => {
       event.reply('server-status', { type: 'error', message: data.toString() });
     });
 
+    // Add error handler
+    serverProcess.on('error', (error) => {
+      console.error('Server process error:', error);
+      serverProcess = null;
+    });
+
+    // Add exit handler
+    serverProcess.on('exit', (code) => {
+      console.log('Server process exited with code:', code);
+      serverProcess = null;
+    });
+
     // Store server process reference for cleanup
     app.on('before-quit', () => {
-      serverProcess.kill();
+      if (serverProcess) {
+        serverProcess.kill();
+        serverProcess = null;
+      }
     });
   }
 });

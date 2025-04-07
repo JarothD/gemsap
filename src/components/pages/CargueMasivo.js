@@ -1,45 +1,66 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Swal from 'sweetalert2'
 
 import { cargueMasivo } from '../util/DocxToPdf';
 import wss from '../../config/wss'
 import NavMenu from '../util/NavMenu';
 
-
 const CargueMasivo = () => {
-
     const actualPage = 'AlimentosMasivo'
+    const [cargando, setCargando] = useState('Cargando...')
 
-    wss.onmessage = (event) => {
-        //console.log(event.data)
-        
-        if(event.data === 'Ready'){
-            setCargando('Cargando...')
-        } 
-        else if(event.data === 'Error'){
-            Swal.fire({
-                icon:'error',
-                title:'Oops...',
-                text: 'Verifique la existencia de Cargue_Masivo.xlsx y PlantillaSimple.docx',
-                didOpen: () => {
-                    Swal.hideLoading()
-                  }
-            })
-            wss.send('Ready')
-        }
-        else {
-            setCargando(event.data)            
-            Swal.fire({
-                title: 'Generando Certificado',
-                html: cargando,
-                allowEscapeKey: false,
-                allowOutsideClick: false,
-                didOpen: () => {
-                  Swal.showLoading()
+    // Usar useEffect para manejar la suscripción al WebSocket
+    useEffect(() => {
+        const handleMessage = (data) => {
+            try {
+                // Intentar parsear el mensaje como JSON
+                const messageData = JSON.parse(data);
+                if (messageData.type === 'progress') {
+                    setCargando(messageData.message);
+                    Swal.fire({
+                        title: 'Generando Certificados',
+                        html: `
+                            <div class="progress-info">
+                                <p>${messageData.message}</p>
+                                ${messageData.counter ? 
+                                    `<p class="counter">${messageData.counter}</p>` 
+                                    : ''}
+                            </div>
+                        `,
+                        allowEscapeKey: false,
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading()
+                        }
+                    });
                 }
-              })
-        }  
-      }
+            } catch (e) {
+                // Si no es JSON, manejar como antes
+                if(data === 'Ready') {
+                    setCargando('Proceso completado');
+                    Swal.close();
+                } else if(data === 'Error') {
+                    Swal.fire({
+                        icon:'error',
+                        title:'Oops...',
+                        text: 'Verifique la existencia de Cargue_Masivo.xlsx y PlantillaSimple.docx',
+                        didOpen: () => {
+                            Swal.hideLoading()
+                        }
+                    });
+                    wss.send('Ready');
+                }
+            }
+        };
+
+        // Subscribirse a los mensajes
+        wss.addMessageHandler(handleMessage);
+
+        // Cleanup: remover el handler cuando el componente se desmonte
+        return () => {
+            wss.removeMessageHandler(handleMessage);
+        };
+    }, []); // Array vacío significa que solo se ejecuta al montar/desmontar
 
     let fechaActual = new Date()
     let anio = fechaActual.getFullYear(),
@@ -57,8 +78,6 @@ const CargueMasivo = () => {
         nombreEmpresa: '',
         fecha: format
     })
-
-    const [cargando, setCargando] = useState('Cargando...')
 
     const onSubmit = async e => {
         e.preventDefault();

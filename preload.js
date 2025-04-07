@@ -1,35 +1,31 @@
-const { exec } = require("child_process")
-
 const { contextBridge, ipcRenderer } = require('electron');
 
-window.addEventListener("DOMContentLoaded", () => {
-    exec(`npm run cors-server`)
-})
-
-// Exponer funcionalidades específicas de forma segura
+// Remover el evento DOMContentLoaded que usa child_process
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Comunicación IPC segura
   startServer: () => ipcRenderer.send('start-server'),
   onServerStatus: (callback) => {
     ipcRenderer.on('server-status', (event, ...args) => callback(...args));
   },
-  // Funciones específicas de la aplicación
   getVersion: () => process.versions.electron,
   platform: process.platform
 });
 
-// Exponer API de WebSocket
+// Mejorar el manejo de WebSocket
 contextBridge.exposeInMainWorld('wss', {
   send: (message) => {
     if (window.WebSocket) {
       const ws = new WebSocket('ws://localhost:3002');
       ws.onopen = () => ws.send(message);
+      return ws;
     }
+    return null;
   },
   onMessage: (callback) => {
     if (window.WebSocket) {
       const ws = new WebSocket('ws://localhost:3002');
       ws.onmessage = callback;
+      return ws;
     }
+    return null;
   }
 });

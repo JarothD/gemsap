@@ -1,6 +1,11 @@
+const QRCode = require('qrcode');
+const fs = require('fs');
+
+const { convertImagesToPDF, convertPDFToPNG } = require('./config/Ghostscript');
 const { /* TemplateHandler, TemplateExtension, */ MimeType } = require('easy-template-x');
 
 const { /* folderPath, resultPath, resultDrinksPath, cardsPath,  */meses, /* getSettings, */ getBuffer/* , resultModulePath, saveSettings */ } = require('./config/Data');
+
 
 function createToFill(data, firmaData, fecha, extras = {}) {
     const { nombres, apellidos, cc } = data;
@@ -50,4 +55,184 @@ function createToFill(data, firmaData, fecha, extras = {}) {
     };
 }
 
-module.exports = { createToFill}
+function createToFillForCards(toFillBase, maxCards = 4) {
+    let toFill = {
+        ...toFillBase
+    };
+
+    // Agregar campos dinámicos para cada tarjeta
+    for (let i = 0; i < maxCards; i++) {
+        toFill = {
+            ...toFill,
+            [`dia${i}`]: '',
+            [`mes${i}`]: '',
+            [`aniov${i}`]: '',
+            [`nombre${i}`]: '',
+            [`apellido${i}`]: '',
+            [`cc${i}`]: '',
+            [`qr${i}`]: ''
+        };
+    }
+
+    return toFill;
+}
+
+// Agregar la función para procesar un paquete de tarjetas
+async function processCardPackage(paquete, toFillBase, QRTemplate) {
+    const toFill = createToFillForCards(toFillBase);
+
+    for (let i = 0; i < paquete.length; i++) {
+        let { nombres, apellidos, cc, fecha } = paquete[i];
+        nombres = nombres.toUpperCase();
+        apellidos = apellidos.toUpperCase();
+        
+        const nombresSplitted = nombres.split(' ');
+        const apellidosSplitted = apellidos.split(' ');
+        let fechaDate = new Date();
+        let mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
+
+        if (fecha) {
+            const nuevaFecha = cambiarFormatoFecha(fecha);
+            fechaDate = new Date(nuevaFecha);
+            mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
+        }
+
+        toFill[`nombre${i}`] = nombresSplitted[0];
+        toFill[`apellido${i}`] = apellidosSplitted[0];
+        toFill[`cc${i}`] = cc;
+        toFill[`dia${i}`] = fechaDate.getUTCDate();
+        toFill[`mes${i}`] = mesName;
+        toFill[`aniov${i}`] = fechaDate.getFullYear() + 1;
+
+        // Generar QR
+        await generateQr(QRTemplate(nombres + ' ' + apellidos, cc, 
+            `${toFill[`dia${i}`]}/${toFill[`mes${i}`]}/${toFill[`aniov${i}`]}`));
+        
+        const qrfile = readTemplateFile("qr.png");
+        toFill[`qr${i}`] = {
+            _type: 'image',
+            source: qrfile,
+            format: MimeType.Png,
+            width: 106,
+            height: 106
+        };
+    }
+
+    return toFill;
+}
+
+async function generateAndReadQr(template, outputPath = 'qr.png') {
+    const opts = {
+        errorCorrectionLevel: 'M',
+        type: 'image/jpeg',
+        quality: 0.9,
+    };
+
+    await QRCode.toFile(outputPath, template, opts);
+    return fs.readFileSync(outputPath);
+}
+
+async function processPdfWithImages(pdfFilePath, outputDir) {
+    fs.mkdirSync(outputDir, { recursive: true });
+
+    const imagePaths = await convertPDFToPNG(pdfFilePath, outputDir);
+    console.log("Imágenes generadas:", imagePaths);
+
+    await convertImagesToPDF(imagePaths, pdfFilePath);
+
+    // Eliminar las imágenes generadas
+    for (const imagePath of imagePaths) {
+        try {
+            fs.unlinkSync(imagePath);
+        } catch (err) {
+            console.error(`Error al eliminar la imagen ${imagePath}:`, err);
+        }
+    }
+
+    // Intentar eliminar la carpeta de imágenes
+    try {
+        fs.rmSync(outputDir, { recursive: true, force: true });
+        console.log(`Carpeta ${outputDir} eliminada correctamente.`);
+    } catch (err) {
+        console.error(`Error al eliminar la carpeta ${outputDir}:`, err);
+    }
+}
+
+function handleError(res, error) {
+    console.error(error);
+    if (error.errno === -4058) {
+        res.status(404).json({ msg: 'Plantilla no se encuentra en la carpeta C:/Gemsap/' });
+    } else if (error.errno === -4051) {
+        res.status(404).json({ msg: 'No se encontró Libre Office Instalado en el Sistema' });
+    } else {
+        res.status(404).json({ msg: 'Contacte con su Administrador' });
+    }
+}
+
+function ensureDirectoryExists(dirPath) {
+    if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+    }
+}
+
+function readTemplateFile(filePath) {
+    return fs.readFileSync(filePath);
+}
+
+const generateQr = async (templateQr) => {
+    const opts = {
+        errorCorrectionLevel: 'M',
+        type: 'image/jpeg',
+        quality: 0.9,
+    };
+
+    try {
+        await QRCode.toFile('qr.png', templateQr, opts);
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+function dividirEnPaquetes(array, tamañoPaquete) {
+    let resultado = [];
+    for (let i = 0; i < array.length; i += tamañoPaquete) {
+        let paquete = array.slice(i, i + tamañoPaquete);
+        resultado.push(paquete);
+    }
+    return resultado;
+}
+
+function cambiarFormatoFecha(fechaString) {
+    if (!isNaN(fechaString)) {
+        return numeroASerieFecha(fechaString)
+    }
+    let fechaSinSlash = fechaString.replace(/\//g, '-');
+    let partesFecha = fechaSinSlash.split('-');
+    let nuevaFecha = `${partesFecha[2]}-${partesFecha[1]}-${partesFecha[0]}`;
+    return nuevaFecha;
+}
+
+function numeroASerieFecha(numero) {
+    let fechaBase = new Date("1900-01-01");
+    let fecha = new Date(fechaBase.getTime() + (numero - 1) * 24 * 60 * 60 * 1000);
+    let dia = fecha.getDate().toString().padStart(2, '0');
+    let mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+    let anio = fecha.getFullYear();
+    let fechaFormateada = `${dia}-${mes}-${anio}`;
+    return fechaFormateada;
+}
+
+module.exports = { 
+    createToFill, 
+    createToFillForCards, 
+    processCardPackage, 
+    generateAndReadQr, 
+    processPdfWithImages, 
+    handleError, 
+    ensureDirectoryExists, 
+    readTemplateFile, 
+    generateQr, 
+    dividirEnPaquetes, 
+    cambiarFormatoFecha, 
+    numeroASerieFecha 
+};

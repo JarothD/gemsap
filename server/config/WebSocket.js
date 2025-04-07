@@ -1,64 +1,47 @@
 const ws = require('ws');
 const wsServer = new ws.Server({ port: '3002' });
 
-global.send = null;
-let activeSocket = null; // Mantiene la referencia al único cliente conectado
-
-function setupConnection(socket) {
-    console.log("Connection Established");
-
-    // Si ya hay un cliente conectado, cerramos la conexión previa
-    if (activeSocket && activeSocket.readyState === ws.OPEN) {
-        console.log("Closing previous connection...");
-        activeSocket.close();
-    }
-
-    activeSocket = socket; // Guardamos la nueva conexión
-
-    global.send = (data) => {
-        if (activeSocket && activeSocket.readyState === ws.OPEN) {
-            activeSocket.send(data, (error) => {
-                if (error) console.error(error);
+// Crear un objeto para manejar el estado y métodos del WebSocket
+const WebSocketManager = {
+    activeSocket: null,
+    
+    send: function(data) {
+        if (this.activeSocket && this.activeSocket.readyState === ws.OPEN) {
+            this.activeSocket.send(data, (error) => {
+                if (error) console.error('WebSocket send error:', error);
             });
         } else {
-            console.error("No active connection to send data.");
+            console.warn('No active WebSocket connection to send data');
         }
-    };
+    },
 
-    socket.on('error', (error) => {
-        console.error('Socket error:', error);
-        attemptReconnect();
-    });
+    setupConnection: function(socket) {
+        console.log("Connection Established");
 
-    socket.on('close', () => {
-        console.log('Connection closed');
-        attemptReconnect();
-    });
-}
-
-function attemptReconnect() {
-    console.log('Attempting to reconnect...');
-    setTimeout(() => {
-        if (!activeSocket || activeSocket.readyState === ws.CLOSED) {
-            console.log('Waiting for a new connection...');
+        // Si hay una conexión activa y es diferente a la nueva, cerrarla
+        if (this.activeSocket && this.activeSocket !== socket && this.activeSocket.readyState === ws.OPEN) {
+            console.log("Closing previous connection...");
+            this.activeSocket.terminate(); // Usar terminate en lugar de close
         }
-    }, 5000); // Reintenta después de 5 segundos
-}
 
-wsServer.on('connection', (socket) => {
-    setupConnection(socket);
-});
+        this.activeSocket = socket;
 
-// Agregar método para cerrar el servidor WebSocket
-const closeWebSocketServer = () => {
-    if (wsServer) {
-        wsServer.close(() => {
-            console.log('WebSocket server closed');
+        socket.on('error', (error) => {
+            console.error('Socket error:', error);
+        });
+
+        socket.on('close', () => {
+            console.log('Connection closed');
+            if (this.activeSocket === socket) {
+                this.activeSocket = null;
+            }
         });
     }
 };
 
-module.exports = {
-    send: global.send,
-    closeWebSocketServer
-};
+// Configurar el servidor WebSocket
+wsServer.on('connection', (socket) => {
+    WebSocketManager.setupConnection(socket);
+});
+
+module.exports = WebSocketManager;
