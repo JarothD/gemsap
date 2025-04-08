@@ -1,12 +1,49 @@
-const { exec } = require('child_process');
+const { execSync } = require('child_process');
 
-const ports = ['9001', '3002'];
-const command = `lsof -i :${ports.join(',:')} -t | xargs kill -9 2>/dev/null || true`;
+function cleanPorts() {
+  const ports = [3002, 9001];
+  const isWindows = process.platform === 'win32';
 
-exec(command, (error, stdout, stderr) => {
-  if (error && error.code !== 1) {
-    console.error('Error durante la limpieza:', error);
-    return;
+  try {
+    for (const port of ports) {
+      if (isWindows) {
+        try {
+          // Find process on port
+          const findCommand = `netstat -ano | findstr :${port}`;
+          const result = execSync(findCommand, { encoding: 'utf8' });
+          
+          if (result) {
+            // Extract PID and kill it
+            const pid = result.split(/\s+/)[5];
+            if (pid) {
+              try {
+                execSync(`taskkill /F /PID ${pid}`);
+                console.log(`Successfully killed process on port ${port} (PID: ${pid})`);
+              } catch (err) {
+                // Process might already be gone
+                console.log(`No active process found on port ${port}`);
+              }
+            }
+          }
+        } catch (err) {
+          // Port might not be in use
+          console.log(`No process found using port ${port}`);
+        }
+      } else {
+        // Linux/Mac command
+        try {
+          execSync(`lsof -ti:${port} | xargs kill -9`);
+          console.log(`Successfully killed process on port ${port}`);
+        } catch (err) {
+          console.log(`No process found using port ${port}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error during port cleanup:', error.message);
+    // Exit with success even if there's an error
+    process.exit(0);
   }
-  console.log('Puertos limpiados correctamente');
-});
+}
+
+cleanPorts();

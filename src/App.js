@@ -2,6 +2,7 @@ import React from 'react';
 import { createHashRouter, RouterProvider } from 'react-router-dom';
 import './App.css';
 
+import { RouteWrapper } from './components/RouteWrapper';
 import CrearCertificado from './components/pages/CrearCertificado';
 import CargueMasivo from './components/pages/CargueMasivo';
 import CertificarModulo from './components/pages/CertificarModulo';
@@ -10,34 +11,63 @@ import CrearCertificadoBebidas from './components/pages/CrearCertificadoBebidas'
 import CargueMasivoBebidas from './components/pages/CargueMasivoBebidas';
 import Carnets from './components/pages/Carnets';
 
+
 const router = createHashRouter([
   {
     path: '/',
-    element: <CrearCertificado />,
+    element: (
+      <RouteWrapper>
+        <CrearCertificado />
+      </RouteWrapper>
+    ),
   },
   {
     path: '/carguemasivo',
-    element: <CargueMasivo />,
+    element: (
+      <RouteWrapper>
+        <CargueMasivo />
+      </RouteWrapper>
+    ),
   },
   {
     path: '/modulos',
-    element: <CertificarModulo />,
+    element: (
+      <RouteWrapper>
+        <CertificarModulo />
+      </RouteWrapper>
+    ),
   },
   {
     path: '/bebidas',
-    element: <CrearCertificadoBebidas />,
+    element: (
+      <RouteWrapper>
+        <CrearCertificadoBebidas />
+      </RouteWrapper>
+    ),
   },
   {
     path: '/bebidasmasivo',
-    element: <CargueMasivoBebidas />,
+    element: (
+      <RouteWrapper>
+        <CargueMasivoBebidas />
+      </RouteWrapper>
+    ),
   },
   {
     path: '/carnets',
-    element: <Carnets />,
+    element: (
+      <RouteWrapper>
+        <Carnets />
+      </RouteWrapper>
+    ),
   },
   {
     path: '/firma',
-    element: <PerfilFirma />,
+    element: (
+      <RouteWrapper>
+        <PerfilFirma />
+      </RouteWrapper>
+    ),
   }
 ], {
   future: {

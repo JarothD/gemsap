@@ -110,11 +110,19 @@ function handleAppTermination() {
     }
     
     if (isDev) {
-      // En desarrollo, usar comandos de Linux para limpiar los puertos
-      require('child_process').exec(
-        'lsof -i :9001,3002 -t | xargs kill -9 2>/dev/null || true',
-        () => resolve()
-      );
+      if (process.platform === 'win32') {
+        // Windows: usar TaskKill para terminar procesos
+        require('child_process').exec(
+          'FOR /F "tokens=5" %P IN (\'netstat -a -n -o ^| findstr :9001 :3002\') DO TaskKill /PID %P /F /T',
+          () => resolve()
+        );
+      } else {
+        // Linux/Mac: usar lsof y kill
+        require('child_process').exec(
+          'lsof -i :9001,3002 -t | xargs kill -9 2>/dev/null || true',
+          () => resolve()
+        );
+      }
     } else {
       resolve();
     }
@@ -162,10 +170,13 @@ ipcMain.on('startServer', (event) => {
   }
 });
 
+// Modificar el manejador de IPC para mejor manejo multiplataforma
 ipcMain.on('start-server', async (event) => {
-  if (isDev && !serverProcess) { // Check if server is not already running
+  if (isDev && !serverProcess) {
     const { spawn } = require('child_process');
-    serverProcess = spawn('yarn', ['server-start'], {
+    const command = process.platform === 'win32' ? 'yarn.cmd' : 'yarn';
+    
+    serverProcess = spawn(command, ['server-start'], {
       shell: true,
       stdio: 'pipe'
     });
