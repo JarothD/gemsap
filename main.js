@@ -110,9 +110,9 @@ function handleAppTermination() {
     }
     
     if (isDev) {
-      // En desarrollo, intentar limpiar los puertos
+      // En desarrollo, usar comandos de Linux para limpiar los puertos
       require('child_process').exec(
-        'FOR /F "tokens=5" %P IN (\'netstat -a -n -o ^| findstr :9001 :3002\') DO TaskKill /PID %P /F /T',
+        'lsof -i :9001,3002 -t | xargs kill -9 2>/dev/null || true',
         () => resolve()
       );
     } else {
