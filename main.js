@@ -1,7 +1,7 @@
 const url = require('url');
 const path = require("path");
 
-const { app, BrowserWindow, session, ipcMain } = require("electron");
+const { app, BrowserWindow, session, ipcMain, screen } = require("electron");
 const isDev = require("electron-is-dev");
 
 let mainWindow;
@@ -33,11 +33,22 @@ async function createWindow() {
     callback(true);
   });
 
+  // Obtener el display primario y sus dimensiones antes de crear la ventana
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { workArea } = primaryDisplay;
+
+  // Calcular dimensiones proporcionales
+  const width = Math.round(workArea.width * 0.4); // 40% del ancho de la pantalla
+  const height = Math.round(workArea.height * 0.6); // 60% del alto de la pantalla
+
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 680,
-    minHeight: 800,
-    minWidth: 680,
+    width,
+    height,
+    minWidth: Math.round(workArea.width * 0.3), 
+    minHeight: Math.round(workArea.height * 0.3), 
+    maxWidth: Math.round(workArea.width * 0.4), 
+    maxHeight: Math.round(workArea.height * 0.9),
+    //show: false, // Ocultamos la ventana inicialmente
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -51,6 +62,41 @@ async function createWindow() {
         webSecurity: true // Mantener seguridad
       })
     }
+  });
+
+  // Calcular la posición para la esquina inferior derecha
+  const windowBounds = mainWindow.getBounds();
+  const x = workArea.x + workArea.width - windowBounds.width;
+  const y = workArea.y + workArea.height - windowBounds.height;
+
+  // Posicionar y mostrar la ventana
+  mainWindow.setPosition(x, y);
+  mainWindow.show();
+
+  // Añadir manejador para el evento maximize
+  mainWindow.on('maximize', () => {
+    console.log('Evento maximize activado');
+    const { workArea } = screen.getPrimaryDisplay();
+    const bounds = mainWindow.getBounds();
+    
+    // Primero desmaximizamos la ventana
+    mainWindow.unmaximize();
+    
+    // Calculamos las nuevas dimensiones
+    const newBounds = {
+      x: workArea.x + workArea.width - bounds.width,
+      y: 0, // Mantenemos la ventana en la parte superior
+      width: bounds.width,
+      height: workArea.height // Usamos toda la altura disponible
+    };
+    
+    console.log('Nuevas dimensiones a aplicar:', newBounds);
+    
+    // Aplicamos las nuevas dimensiones
+    setTimeout(() => {
+      mainWindow.setBounds(newBounds);
+      console.log('Dimensiones finales:', mainWindow.getBounds());
+    }, 100); // Pequeño retraso para asegurar que unmaximize se complete
   });
 
   // Deshabilitar el caché
