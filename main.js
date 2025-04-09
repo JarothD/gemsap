@@ -74,7 +74,7 @@ async function createWindow() {
   mainWindow.show();
 
   // Añadir manejador para el evento maximize
-  mainWindow.on('maximize', () => {
+  /* mainWindow.on('maximize', () => {
     console.log('Evento maximize activado');
     const { workArea } = screen.getPrimaryDisplay();
     const bounds = mainWindow.getBounds();
@@ -97,7 +97,7 @@ async function createWindow() {
       mainWindow.setBounds(newBounds);
       console.log('Dimensiones finales:', mainWindow.getBounds());
     }, 100); // Pequeño retraso para asegurar que unmaximize se complete
-  });
+  }); */
 
   // Deshabilitar el caché
   mainWindow.webContents.session.clearCache();

@@ -1,6 +1,7 @@
 import React from 'react';
 import { createHashRouter, RouterProvider } from 'react-router-dom';
 import './App.css';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import { RouteWrapper } from './components/RouteWrapper';
 import CrearCertificado from './components/pages/CrearCertificado';
@@ -10,7 +11,6 @@ import PerfilFirma from './components/pages/PerfilFirma';
 import CrearCertificadoBebidas from './components/pages/CrearCertificadoBebidas';
 import CargueMasivoBebidas from './components/pages/CargueMasivoBebidas';
 import Carnets from './components/pages/Carnets';
-
 
 const router = createHashRouter([
   {
@@ -73,11 +73,16 @@ const router = createHashRouter([
   future: {
     v7_startTransition: true,
     v7_relativeSplatPath: true
-  }
+  },
+  errorElement: <ErrorBoundary />
 });
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <ErrorBoundary>
+      <RouterProvider router={router} />
+    </ErrorBoundary>
+  );
 }
 
 export default App;
