@@ -1,12 +1,11 @@
-import React, { Suspense } from 'react';
-import ErrorBoundary from './ErrorBoundary';
+import React from 'react';
+import { KeyboardNavigator } from './KeyboardNavigator';
 
 export const RouteWrapper = ({ children }) => {
   return (
-    <ErrorBoundary>
-      <Suspense fallback={<div>Cargando...</div>}>
-        {children}
-      </Suspense>
-    </ErrorBoundary>
+    <>
+      <KeyboardNavigator />
+      {children}
+    </>
   );
 };

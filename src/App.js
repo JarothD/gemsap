@@ -2,6 +2,7 @@ import React from 'react';
 import { createHashRouter, RouterProvider } from 'react-router-dom';
 import './App.css';
 import ErrorBoundary from './components/ErrorBoundary';
+import { KeyboardNavigator } from './components/KeyboardNavigator';
 
 import { RouteWrapper } from './components/RouteWrapper';
 import CrearCertificado from './components/pages/CrearCertificado';
