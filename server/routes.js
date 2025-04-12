@@ -9,14 +9,14 @@ const reader = require('xlsx');
 
 const { folderPath, resultPath, resultDrinksPath, cardsPath, meses, getSettings, getBuffer, resultModulePath, saveSettings } = require('./config/Data');
 const { convertImagesToPDF, convertPDFToPNG } = require('./config/Ghostscript');
-const { createToFill, processPdfWithImages, handleError, ensureDirectoryExists, readTemplateFile, generateQr, dividirEnPaquetes, cambiarFormatoFecha, processCardPackage } = require('./utils');
+const { createToFill, processPdfWithImages, handleError, ensureDirectoryExists, readTemplateFile, generateQr, dividirEnPaquetes, cambiarFormatoFecha, processCardPackage, generateQrBatch } = require('./utils');
 const WebSocketManager = require('./config/WebSocket');
 
 const router = express.Router();
 
-const QRTemplate = (nombreCompleto, documento, fechaFin) => {
+/* const QRTemplate = (nombreCompleto, documento, fechaFin) => {
     return `GEMSAP Certifica Que ${nombreCompleto}, Con Número de Documento ${documento}. Asistió Al Curso De Manipulación Higiénica De Alimentos y BPM. Vàlido Hasta ${fechaFin}. Mayor Información Al WhatsApp 3107089494.`
-};
+}; */
 
 const QRTemplateModule = (nombreCompleto, documento, fechaExp, modulo) => {
     return `GEMSAP Certifica Que ${nombreCompleto}, Con Número de Documento ${documento}. El dia ${fechaExp} Realizo el Modulo ${modulo} Del Curso De Manipulación Higiénica De Alimentos y BPM. Mayor Información Al WhatsApp 3107089494.`
@@ -394,32 +394,28 @@ router.post('/carguemasivo', async (req, res) => {
         const { nombreEmpresa, fecha } = req.body;
         const startTime = Date.now();
         
-        // Notificar inicio del proceso
-        WebSocketManager.send(JSON.stringify({
-            type: 'progress',
-            message: 'Iniciando proceso de generación de certificados...'
-        }));
+        // Preparar directorio de QRs
+        const qrDir = path.join(resultPath, nombreEmpresa, 'qrs_temp');
+        ensureDirectoryExists(qrDir);
 
         // Cargar configuración y firmas
-        WebSocketManager.send(JSON.stringify({
-            type: 'progress',
-            message: 'Cargando configuración y firmas...'
-        }));
         const { pathFirmaGemsap, firmaSeleccionada, firmas } = getSettings();
-        const { nombreFirma, tituloFirma, tarjetaProfesional, pathFirma } = firmas.find(fir => fir.firma === firmaSeleccionada);
-
-        // Configurar el manejador de plantillas
-        const handler = new TemplateHandler({});
+        const { nombreFirma, tituloFirma, tarjetaProfesional, pathFirma } = firmas.find(
+            fir => fir.firma === firmaSeleccionada
+        );
 
         // Leer plantillas y datos
-        WebSocketManager.send(JSON.stringify({
-            type: 'progress',
-            message: 'Leyendo plantillas y datos...'
-        }));
         const file = fs.readFileSync(folderPath + '/PlantillaSimple.docx');
         const plantillaX = reader.readFile(folderPath + '/Cargue_Masivo.xlsx');
-        const clientsSheet = plantillaX.Sheets['data'];
-        const dataClient = reader.utils.sheet_to_json(clientsSheet);
+        const dataClient = reader.utils.sheet_to_json(plantillaX.Sheets['data']);
+
+        // Generar todos los QRs en paralelo
+        WebSocketManager.send(JSON.stringify({
+            type: 'progress',
+            message: 'Generando códigos QR en batch...'
+        }));
+        
+        const qrResults = await generateQrBatch(dataClient, fecha, qrDir);
 
         // Crear objeto base para toFill
         const toFillBase = {
@@ -442,84 +438,53 @@ router.post('/carguemasivo', async (req, res) => {
             }
         };
 
-        // Preparar directorio
-        WebSocketManager.send(JSON.stringify({
-            type: 'progress',
-            message: 'Preparando directorio de salida...'
-        }));
-        if (!fs.existsSync(resultPath + '/' + nombreEmpresa)) {
-            fs.mkdirSync(resultPath + '/' + nombreEmpresa);
-        }
+        // Preparar directorio de salida
+        ensureDirectoryExists(path.join(resultPath, nombreEmpresa));
 
         let contador = 1;
         const total = dataClient.length;
+        const handler = new TemplateHandler({});
 
         // Procesar cada cliente
         for (const client of dataClient) {
-            let { nombres, apellidos, cc } = client;
-
+            const { nombres, apellidos, cc } = client;
+            const qrInfo = qrResults.find(qr => qr.cc === cc);
+            
             WebSocketManager.send(JSON.stringify({
                 type: 'progress',
-                message: 'Preparando datos del certificado...',
+                message: 'Procesando certificado...',
                 counter: `${contador} de ${total}`
             }));
 
-            nombres = nombres.toUpperCase();
-            apellidos = apellidos.toUpperCase();
-            
-            let nombresSplitted = nombres.split(' ');
-            let apellidosSplitted = apellidos.split(' ');
-            let fechaDate = new Date(fecha);
-            let mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
-            
-            if(client.fecha){
-                let nuevaFecha = cambiarFormatoFecha(client.fecha);
-                fechaDate = new Date(nuevaFecha);
-                mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
-            }
+            const fechaDate = new Date(client.fecha || fecha);
+            const mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
 
-            let toFill = {
+            // Crear documento
+            console.time('Creacion Doc a PDF');
+            const qrBuffer = fs.readFileSync(qrInfo.path);
+            
+            const doc = await handler.process(file, {
                 ...toFillBase,
+                nombres: nombres.toUpperCase(),
+                apellidos: apellidos.toUpperCase(),
+                nombre: nombres.split(' ')[0].toUpperCase(),
+                apellido: apellidos.split(' ')[0].toUpperCase(),
+                cc,
                 dia: fechaDate.getUTCDate(),
                 mes: mesName,
                 mesnum: fechaDate.getUTCMonth() + 1,
                 anio: fechaDate.getFullYear(),
                 aniov: fechaDate.getFullYear() + 1,
-                nombres: nombres,
-                apellidos: apellidos,
-                nombre: nombresSplitted[0],            
-                apellido: apellidosSplitted[0],
-                cc: cc
-            };
-
-            // Generar código QR
-            WebSocketManager.send(JSON.stringify({
-                type: 'progress',
-                message: 'Generando código QR...',
-                counter: `${contador} de ${total}`
-            }));
-            await generateQr(QRTemplate(nombres + ' ' + apellidos, cc, `${toFill.dia}/${toFill.mesnum}/${toFill.aniov}`));
-            const qrfile = fs.readFileSync('qr.png');
-
-            // Crear documento
-            WebSocketManager.send(JSON.stringify({
-                type: 'progress',
-                message: 'Creando documento PDF...',
-                counter: `${contador} de ${total}`
-            }));
-            console.time('Creacion Doc a PDF');
-            const doc = await handler.process(file, {
-                ...toFill,
                 qr: {
                     _type: 'image',
-                    source: qrfile,
+                    source: qrBuffer,
                     format: MimeType.Png,
                     width: 106,
                     height: 106
                 },
                 qr2: {
                     _type: 'image',
-                    source: qrfile,
+                    source: qrBuffer,
                     format: MimeType.Png,
                     width: 142,
                     height: 142
@@ -528,57 +493,42 @@ router.post('/carguemasivo', async (req, res) => {
 
             const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
             console.timeEnd('Creacion Doc a PDF');
-            // Guardar PDF
-            const pdfFileName = `${nombreEmpresa}/CMA_${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`;
+
+            // Guardar y procesar PDF
+            const pdfFileName = `${nombreEmpresa}/CMA_${apellidos.split(' ')[0]}_${nombres.split(' ')[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`;
             const pdfFilePath = path.join(resultPath, pdfFileName);
             fs.writeFileSync(pdfFilePath, pdfBuf);
 
             // Procesar imágenes
-            WebSocketManager.send(JSON.stringify({
-                type: 'progress',
-                message: 'Procesando imágenes...',
-                counter: `${contador} de ${total}`
-            }));
-            const outputDir = path.join(resultPath, "images");
-            fs.mkdirSync(outputDir, { recursive: true });
-
+            const outputDir = path.join(resultPath, "images_temp");
+            ensureDirectoryExists(outputDir);
+            
             const imagePaths = await convertPDFToPNG(pdfFilePath, outputDir);
             await convertImagesToPDF(imagePaths, pdfFilePath);
 
-            // Limpieza de archivos temporales
-            WebSocketManager.send(JSON.stringify({
-                type: 'progress',
-                message: 'Limpiando archivos temporales...',
-                counter: `${contador} de ${total}`
-            }));
-            console.time('Limpieza de archivos temporales');
+            // Limpieza
             for (const imagePath of imagePaths) {
-                try {
-                    fs.unlinkSync(imagePath);
-                } catch (err) {
-                    console.error(`Error al eliminar la imagen ${imagePath}:`, err);
-                }
+                fs.unlinkSync(imagePath);
             }
+            fs.rmSync(outputDir, { recursive: true, force: true });
 
-            try {
-                fs.rmSync(outputDir, { recursive: true, force: true });
-            } catch (err) {
-                console.error(`Error al eliminar la carpeta ${outputDir}:`, err);
-            }
-            console.timeEnd('Limpieza de archivos temporales');
             contador++;
         }
+
+        // Limpieza final de QRs
+        fs.rmSync(qrDir, { recursive: true, force: true });
         
         const endTime = Date.now();
         const totalTime = ((endTime - startTime) / 1000).toFixed(2);
         console.timeEnd('Cargue Masivo');
 
-
         WebSocketManager.send('Ready');
-        res.json({ msg: `${contador} Certificados generados con éxito en ${totalTime} segundos` });
+        res.json({ msg: `${contador-1} Certificados generados con éxito en ${totalTime} segundos` });
+
     } catch (error) {
         console.error(error);
         WebSocketManager.send('Error');
+        res.status(500).json({ error: error.message });
     }
 });
 

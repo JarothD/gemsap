@@ -68,6 +68,7 @@ function convertPDFToPNG(inputPDF, outputDir, dpi = 300) {
 }
 
 async function convertImagesToPDF(imagePaths, outputPdfPath) {
+    console.time('Convertir imágenes a PDF');
     if (!Array.isArray(imagePaths) || imagePaths.length === 0) {
         return Promise.reject(new Error("imagePaths debe ser un array con al menos una imagen."));
     }
@@ -103,6 +104,7 @@ async function convertImagesToPDF(imagePaths, outputPdfPath) {
         fs.renameSync(tempOutputPath, outputPdfPath);
 
         //console.log("PDF generado correctamente:", outputPdfPath);
+        console.timeEnd('Convertir imágenes a PDF');
         return outputPdfPath;
     } catch (error) {
         console.error("Error al convertir imágenes a PDF:", error);

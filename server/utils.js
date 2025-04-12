@@ -1,10 +1,15 @@
 const QRCode = require('qrcode');
 const fs = require('fs');
+const path = require('path');
 
 const { convertImagesToPDF, convertPDFToPNG } = require('./config/Ghostscript');
 const { /* TemplateHandler, TemplateExtension, */ MimeType } = require('easy-template-x');
 
 const { /* folderPath, resultPath, resultDrinksPath, cardsPath,  */meses, /* getSettings, */ getBuffer/* , resultModulePath, saveSettings */ } = require('./config/Data');
+
+const QRTemplate = (nombreCompleto, documento, fechaFin) => {
+    return `GEMSAP Certifica Que ${nombreCompleto}, Con Número de Documento ${documento}. Asistió Al Curso De Manipulación Higiénica De Alimentos y BPM. Vàlido Hasta ${fechaFin}. Mayor Información Al WhatsApp 3107089494.`
+};
 
 
 function createToFill(data, firmaData, fecha, extras = {}) {
@@ -197,6 +202,46 @@ const generateQr = async (templateQr) => {
     console.timeEnd('Generar QR');
 };
 
+// Agregar nueva función
+async function generateQrBatch(clients, fecha, outputDir) {
+    console.time('Generación batch QRs');
+    
+    // Asegurar que el directorio existe
+    if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    const qrPromises = clients.map((client, index) => {
+        const { nombres, apellidos, cc } = client;
+        const fechaDate = new Date(client.fecha || fecha);
+        const dia = fechaDate.getUTCDate();
+        const mes = fechaDate.getUTCMonth() + 1;
+        const anioV = fechaDate.getFullYear() + 1;
+
+        const qrText = QRTemplate(
+            `${nombres.toUpperCase()} ${apellidos.toUpperCase()}`,
+            cc,
+            `${dia}/${mes}/${anioV}`
+        );
+
+        const qrPath = path.join(outputDir, `qr_${index}_${cc}.png`);
+        return QRCode.toFile(qrPath, qrText, {
+            errorCorrectionLevel: 'M',
+            type: 'image/png',
+            quality: 0.9,
+        }).then(() => ({
+            index,
+            cc,
+            path: qrPath
+        }));
+    });
+
+    const results = await Promise.all(qrPromises);
+    console.timeEnd('Generación batch QRs');
+    
+    return results;
+}
+
 function dividirEnPaquetes(array, tamañoPaquete) {
     let resultado = [];
     for (let i = 0; i < array.length; i += tamañoPaquete) {
@@ -236,6 +281,7 @@ module.exports = {
     ensureDirectoryExists, 
     readTemplateFile, 
     generateQr, 
+    generateQrBatch,
     dividirEnPaquetes, 
     cambiarFormatoFecha, 
     numeroASerieFecha 
