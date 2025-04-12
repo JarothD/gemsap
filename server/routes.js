@@ -9,7 +9,7 @@ const reader = require('xlsx');
 
 const { folderPath, resultPath, resultDrinksPath, cardsPath, meses, getSettings, getBuffer, resultModulePath, saveSettings } = require('./config/Data');
 const { convertImagesToPDF, convertPDFToPNG } = require('./config/Ghostscript');
-const { createToFill, processPdfWithImages, handleError, ensureDirectoryExists, readTemplateFile, generateQr, dividirEnPaquetes, cambiarFormatoFecha, processCardPackage, generateQrBatch } = require('./utils');
+const { createToFill, processPdfWithImages, handleError, ensureDirectoryExists, readTemplateFile, generateQr, dividirEnPaquetes, cambiarFormatoFecha, processCardPackage, generateQrBatch, processBatchDocuments, processImageBatch } = require('./utils');
 const WebSocketManager = require('./config/WebSocket');
 
 const router = express.Router();
@@ -390,38 +390,37 @@ router.post('/carnets', async (req, res) => {
 
 router.post('/carguemasivo', async (req, res) => {
     try {
-        console.time('Cargue Masivo');
+        
         const { nombreEmpresa, fecha } = req.body;
         const startTime = Date.now();
-        
-        // Preparar directorio de QRs
+
+        // 1. Preparar directorios
         const qrDir = path.join(resultPath, nombreEmpresa, 'qrs_temp');
+        const outputDir = path.join(resultPath, nombreEmpresa);
+        const tempDir = path.join(resultPath, nombreEmpresa, 'temp');
         ensureDirectoryExists(qrDir);
+        ensureDirectoryExists(outputDir);
+        ensureDirectoryExists(tempDir);
 
-        // Cargar configuración y firmas
+        // 2. Cargar datos y configuración
         const { pathFirmaGemsap, firmaSeleccionada, firmas } = getSettings();
-        const { nombreFirma, tituloFirma, tarjetaProfesional, pathFirma } = firmas.find(
-            fir => fir.firma === firmaSeleccionada
-        );
-
-        // Leer plantillas y datos
+        const firmaData = firmas.find(fir => fir.firma === firmaSeleccionada);
         const file = fs.readFileSync(folderPath + '/PlantillaSimple.docx');
         const plantillaX = reader.readFile(folderPath + '/Cargue_Masivo.xlsx');
         const dataClient = reader.utils.sheet_to_json(plantillaX.Sheets['data']);
 
-        // Generar todos los QRs en paralelo
+        // 3. Generar QRs en batch
         WebSocketManager.send(JSON.stringify({
             type: 'progress',
             message: 'Generando códigos QR en batch...'
         }));
-        
         const qrResults = await generateQrBatch(dataClient, fecha, qrDir);
 
-        // Crear objeto base para toFill
+        // 4. Preparar datos base
         const toFillBase = {
-            nombreFirma,
-            tituloFirma,
-            tarjetaProfesional,
+            nombreFirma: firmaData.nombreFirma,
+            tituloFirma: firmaData.tituloFirma,
+            tarjetaProfesional: firmaData.tarjetaProfesional,
             firmaGemsap: {
                 _type: 'image',
                 source: getBuffer(pathFirmaGemsap),
@@ -431,99 +430,55 @@ router.post('/carguemasivo', async (req, res) => {
             },
             firma: {
                 _type: 'image',
-                source: getBuffer(pathFirma),
+                source: getBuffer(firmaData.pathFirma),
                 format: MimeType.Png,
                 width: 170,
                 height: 110
             }
         };
 
-        // Preparar directorio de salida
-        ensureDirectoryExists(path.join(resultPath, nombreEmpresa));
+        // 5. Procesar documentos en batch
+        WebSocketManager.send(JSON.stringify({
+            type: 'progress',
+            message: 'Procesando documentos en batch...'
+        }));
+        const pdfResults = await processBatchDocuments(
+            dataClient, 
+            file, 
+            toFillBase, 
+            qrResults, 
+            outputDir,
+            fecha,  // Add fecha parameter
+            meses   // Add meses parameter
+        );
 
-        let contador = 1;
-        const total = dataClient.length;
-        const handler = new TemplateHandler({});
+        // 6. Procesar imágenes en batch
+        WebSocketManager.send(JSON.stringify({
+            type: 'progress',
+            message: 'Procesando imágenes en batch...'
+        }));
+        await processImageBatch(pdfResults, tempDir);
 
-        // Procesar cada cliente
-        for (const client of dataClient) {
-            const { nombres, apellidos, cc } = client;
-            const qrInfo = qrResults.find(qr => qr.cc === cc);
-            
-            WebSocketManager.send(JSON.stringify({
-                type: 'progress',
-                message: 'Procesando certificado...',
-                counter: `${contador} de ${total}`
-            }));
-
-            const fechaDate = new Date(client.fecha || fecha);
-            const mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1).name;
-
-            // Crear documento
-            console.time('Creacion Doc a PDF');
-            const qrBuffer = fs.readFileSync(qrInfo.path);
-            
-            const doc = await handler.process(file, {
-                ...toFillBase,
-                nombres: nombres.toUpperCase(),
-                apellidos: apellidos.toUpperCase(),
-                nombre: nombres.split(' ')[0].toUpperCase(),
-                apellido: apellidos.split(' ')[0].toUpperCase(),
-                cc,
-                dia: fechaDate.getUTCDate(),
-                mes: mesName,
-                mesnum: fechaDate.getUTCMonth() + 1,
-                anio: fechaDate.getFullYear(),
-                aniov: fechaDate.getFullYear() + 1,
-                qr: {
-                    _type: 'image',
-                    source: qrBuffer,
-                    format: MimeType.Png,
-                    width: 106,
-                    height: 106
-                },
-                qr2: {
-                    _type: 'image',
-                    source: qrBuffer,
-                    format: MimeType.Png,
-                    width: 142,
-                    height: 142
-                }
-            });
-
-            const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
-            console.timeEnd('Creacion Doc a PDF');
-
-            // Guardar y procesar PDF
-            const pdfFileName = `${nombreEmpresa}/CMA_${apellidos.split(' ')[0]}_${nombres.split(' ')[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`;
-            const pdfFilePath = path.join(resultPath, pdfFileName);
-            fs.writeFileSync(pdfFilePath, pdfBuf);
-
-            // Procesar imágenes
-            const outputDir = path.join(resultPath, "images_temp");
-            ensureDirectoryExists(outputDir);
-            
-            const imagePaths = await convertPDFToPNG(pdfFilePath, outputDir);
-            await convertImagesToPDF(imagePaths, pdfFilePath);
-
-            // Limpieza
-            for (const imagePath of imagePaths) {
-                fs.unlinkSync(imagePath);
+        // 7. Limpieza final con manejo de errores
+        try {
+            if (fs.existsSync(qrDir)) {
+                fs.rmSync(qrDir, { recursive: true, force: true });
             }
-            fs.rmSync(outputDir, { recursive: true, force: true });
-
-            contador++;
+            if (fs.existsSync(tempDir)) {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        } catch (cleanupError) {
+            console.log('Aviso: Error en limpieza final:', cleanupError.code);
+            // Continuar con el proceso incluso si la limpieza falla
         }
 
-        // Limpieza final de QRs
-        fs.rmSync(qrDir, { recursive: true, force: true });
+        const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
         
-        const endTime = Date.now();
-        const totalTime = ((endTime - startTime) / 1000).toFixed(2);
-        console.timeEnd('Cargue Masivo');
 
         WebSocketManager.send('Ready');
-        res.json({ msg: `${contador-1} Certificados generados con éxito en ${totalTime} segundos` });
+        res.json({ 
+            msg: `${dataClient.length} Certificados generados con éxito en ${totalTime} segundos`
+        });
 
     } catch (error) {
         console.error(error);

@@ -14,10 +14,10 @@ const generateQR = async (templateQr) => {
         quality: 0.9,
     };
     
-    console.time('Generar QR');
+    
     await QRCode.toFile('qr.png', templateQr, opts);
     const qrBuffer = fs.readFileSync('qr.png');
-    console.timeEnd('Generar QR');
+    
     return qrBuffer;
 };
 

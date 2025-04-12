@@ -2,8 +2,10 @@ const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
 
+const libre = require('libreoffice-convert');
+
 const { convertImagesToPDF, convertPDFToPNG } = require('./config/Ghostscript');
-const { /* TemplateHandler, TemplateExtension, */ MimeType } = require('easy-template-x');
+const { /* TemplateHandler, TemplateExtension, */ MimeType, TemplateHandler } = require('easy-template-x');
 
 const { /* folderPath, resultPath, resultDrinksPath, cardsPath,  */meses, /* getSettings, */ getBuffer/* , resultModulePath, saveSettings */ } = require('./config/Data');
 
@@ -138,7 +140,7 @@ async function generateAndReadQr(template, outputPath = 'qr.png') {
 }
 
 async function processPdfWithImages(pdfFilePath, outputDir) {
-    console.time('Procesar PDF con imágenes');
+    
     fs.mkdirSync(outputDir, { recursive: true });
 
     const imagePaths = await convertPDFToPNG(pdfFilePath, outputDir);
@@ -162,7 +164,7 @@ async function processPdfWithImages(pdfFilePath, outputDir) {
     } catch (err) {
         console.error(`Error al eliminar la carpeta ${outputDir}:`, err);
     }
-    console.timeEnd('Procesar PDF con imágenes');
+    
 }
 
 function handleError(res, error) {
@@ -193,18 +195,18 @@ const generateQr = async (templateQr) => {
         quality: 0.9,
     };
 
-    console.time('Generar QR');
+    
     try {
         await QRCode.toFile('qr.png', templateQr, opts);
     } catch (error) {
         console.error(error);
     }
-    console.timeEnd('Generar QR');
+    
 };
 
 // Agregar nueva función
 async function generateQrBatch(clients, fecha, outputDir) {
-    console.time('Generación batch QRs');
+    
     
     // Asegurar que el directorio existe
     if (!fs.existsSync(outputDir)) {
@@ -237,7 +239,7 @@ async function generateQrBatch(clients, fecha, outputDir) {
     });
 
     const results = await Promise.all(qrPromises);
-    console.timeEnd('Generación batch QRs');
+    
     
     return results;
 }
@@ -271,6 +273,120 @@ function numeroASerieFecha(numero) {
     return fechaFormateada;
 }
 
+// Modify the processBatchDocuments function to receive meses as a parameter
+async function processBatchDocuments(clients, file, toFillBase, qrResults, outputPath, fecha, meses) {
+    
+    
+    const handler = new TemplateHandler({});
+    const batchPromises = clients.map(async (client) => {
+        const { nombres, apellidos, cc } = client;
+        const qrInfo = qrResults.find(qr => qr.cc === cc);
+        const qrBuffer = fs.readFileSync(qrInfo.path);
+        const fechaDate = new Date(client.fecha || fecha);
+        
+        // Validate meses array exists before using find
+        if (!Array.isArray(meses)) {
+            throw new Error('meses array is not properly defined');
+        }
+        
+        const mesName = meses.find(mesObj => mesObj.id === fechaDate.getUTCMonth() + 1)?.name || '';
+
+        // Crear documento
+        const doc = await handler.process(file, {
+            ...toFillBase,
+            nombres: nombres.toUpperCase(),
+            apellidos: apellidos.toUpperCase(),
+            nombre: nombres.split(' ')[0].toUpperCase(),
+            apellido: apellidos.split(' ')[0].toUpperCase(),
+            cc,
+            dia: fechaDate.getUTCDate(),
+            mes: mesName,
+            mesnum: fechaDate.getUTCMonth() + 1,
+            anio: fechaDate.getFullYear(),
+            aniov: fechaDate.getFullYear() + 1,
+            qr: {
+                _type: 'image',
+                source: qrBuffer,
+                format: MimeType.Png,
+                width: 106,
+                height: 106
+            },
+            qr2: {
+                _type: 'image',
+                source: qrBuffer,
+                format: MimeType.Png,
+                width: 142,
+                height: 142
+            }
+        });
+
+        const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
+        const pdfFileName = `CMA_${apellidos.split(' ')[0]}_${nombres.split(' ')[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`;
+        const pdfPath = path.join(outputPath, pdfFileName);
+        
+        fs.writeFileSync(pdfPath, pdfBuf);
+        return { pdfPath, cc };
+    });
+
+    const results = await Promise.all(batchPromises);
+    
+    return results;
+}
+
+// Función para procesar imágenes en batch
+async function processImageBatch(pdfPaths, tempDir) {
+    console.time('Procesamiento batch imágenes');
+    
+    const batchPromises = pdfPaths.map(async ({ pdfPath, cc }) => {
+        try {
+            const outputDir = path.join(tempDir, cc.toString());
+            ensureDirectoryExists(outputDir);
+
+            // Procesar PDF a PNG y viceversa
+            const imagePaths = await convertPDFToPNG(pdfPath, outputDir);
+            await convertImagesToPDF(imagePaths, pdfPath);
+
+            // Limpieza con manejo de errores
+            try {
+                // Eliminar archivos de imagen
+                for (const imagePath of imagePaths) {
+                    try {
+                        if (fs.existsSync(imagePath)) {
+                            fs.unlinkSync(imagePath);
+                        }
+                    } catch (err) {
+                        console.log(`Aviso: No se pudo eliminar ${imagePath}`, err.code);
+                    }
+                }
+
+                // Eliminar directorio temporal
+                if (fs.existsSync(outputDir)) {
+                    fs.rmSync(outputDir, { recursive: true, force: true });
+                }
+            } catch (cleanupError) {
+                console.log(`Aviso: Error en limpieza para ${cc}:`, cleanupError.code);
+            }
+
+            return pdfPath;
+        } catch (error) {
+            console.error(`Error procesando documento ${cc}:`, error);
+            // Continuar con el siguiente documento en caso de error
+            return null;
+        }
+    });
+
+    try {
+        const results = await Promise.all(batchPromises);
+        console.timeEnd('Procesamiento batch imágenes');
+        // Filtrar resultados nulos (documentos que fallaron)
+        return results.filter(result => result !== null);
+    } catch (error) {
+        console.error('Error en procesamiento batch:', error);
+        // Continuar con el proceso incluso si hay errores
+        return [];
+    }
+}
+
 module.exports = { 
     createToFill, 
     createToFillForCards, 
@@ -284,5 +400,7 @@ module.exports = {
     generateQrBatch,
     dividirEnPaquetes, 
     cambiarFormatoFecha, 
-    numeroASerieFecha 
+    numeroASerieFecha,
+    processBatchDocuments,
+    processImageBatch
 };
