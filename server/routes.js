@@ -390,6 +390,7 @@ router.post('/carnets', async (req, res) => {
 
 router.post('/carguemasivo', async (req, res) => {
     try {
+        console.time('Cargue Masivo');
         const { nombreEmpresa, fecha } = req.body;
         const startTime = Date.now();
         
@@ -506,6 +507,7 @@ router.post('/carguemasivo', async (req, res) => {
                 message: 'Creando documento PDF...',
                 counter: `${contador} de ${total}`
             }));
+            console.time('Creacion Doc a PDF');
             const doc = await handler.process(file, {
                 ...toFill,
                 qr: {
@@ -525,7 +527,7 @@ router.post('/carguemasivo', async (req, res) => {
             });
 
             const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
-            
+            console.timeEnd('Creacion Doc a PDF');
             // Guardar PDF
             const pdfFileName = `${nombreEmpresa}/CMA_${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`;
             const pdfFilePath = path.join(resultPath, pdfFileName);
@@ -549,6 +551,7 @@ router.post('/carguemasivo', async (req, res) => {
                 message: 'Limpiando archivos temporales...',
                 counter: `${contador} de ${total}`
             }));
+            console.time('Limpieza de archivos temporales');
             for (const imagePath of imagePaths) {
                 try {
                     fs.unlinkSync(imagePath);
@@ -562,12 +565,13 @@ router.post('/carguemasivo', async (req, res) => {
             } catch (err) {
                 console.error(`Error al eliminar la carpeta ${outputDir}:`, err);
             }
-
+            console.timeEnd('Limpieza de archivos temporales');
             contador++;
         }
         
         const endTime = Date.now();
         const totalTime = ((endTime - startTime) / 1000).toFixed(2);
+        console.timeEnd('Cargue Masivo');
 
 
         WebSocketManager.send('Ready');

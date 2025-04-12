@@ -41,6 +41,7 @@ function checkGhostscript() {
  */
 function convertPDFToPNG(inputPDF, outputDir, dpi = 300) {
     return new Promise((resolve, reject) => {
+        console.time('PDF a PNG');
         const outputPattern = path.join(outputDir, "output-%03d.png");
         const gsCommand = `${GS_CMD} -dNOPAUSE -sDEVICE=png16m -r${dpi} -o "${outputPattern}" "${inputPDF}"`;
 
@@ -59,7 +60,7 @@ function convertPDFToPNG(inputPDF, outputDir, dpi = 300) {
                     .sort(); // Ordenar en caso de múltiples imágenes
 
                 if (imageFiles.length === 0) return reject("No se generaron imágenes");
-
+                console.timeEnd('PDF a PNG');
                 resolve(imageFiles);
             });
         });
