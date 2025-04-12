@@ -133,10 +133,11 @@ async function generateAndReadQr(template, outputPath = 'qr.png') {
 }
 
 async function processPdfWithImages(pdfFilePath, outputDir) {
+    console.time('Procesar PDF con imágenes');
     fs.mkdirSync(outputDir, { recursive: true });
 
     const imagePaths = await convertPDFToPNG(pdfFilePath, outputDir);
-    console.log("Imágenes generadas:", imagePaths);
+    //console.log("Imágenes generadas:", imagePaths);
 
     await convertImagesToPDF(imagePaths, pdfFilePath);
 
@@ -152,10 +153,11 @@ async function processPdfWithImages(pdfFilePath, outputDir) {
     // Intentar eliminar la carpeta de imágenes
     try {
         fs.rmSync(outputDir, { recursive: true, force: true });
-        console.log(`Carpeta ${outputDir} eliminada correctamente.`);
+        //console.log(`Carpeta ${outputDir} eliminada correctamente.`);
     } catch (err) {
         console.error(`Error al eliminar la carpeta ${outputDir}:`, err);
     }
+    console.timeEnd('Procesar PDF con imágenes');
 }
 
 function handleError(res, error) {
@@ -186,11 +188,13 @@ const generateQr = async (templateQr) => {
         quality: 0.9,
     };
 
+    console.time('Generar QR');
     try {
         await QRCode.toFile('qr.png', templateQr, opts);
     } catch (error) {
-        console.log(error);
+        console.error(error);
     }
+    console.timeEnd('Generar QR');
 };
 
 function dividirEnPaquetes(array, tamañoPaquete) {

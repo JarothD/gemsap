@@ -101,7 +101,7 @@ async function convertImagesToPDF(imagePaths, outputPdfPath) {
         }
         fs.renameSync(tempOutputPath, outputPdfPath);
 
-        console.log("PDF generado correctamente:", outputPdfPath);
+        //console.log("PDF generado correctamente:", outputPdfPath);
         return outputPdfPath;
     } catch (error) {
         console.error("Error al convertir imágenes a PDF:", error);

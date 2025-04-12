@@ -9,7 +9,7 @@ const reader = require('xlsx');
 
 const { folderPath, resultPath, resultDrinksPath, cardsPath, meses, getSettings, getBuffer, resultModulePath, saveSettings } = require('./config/Data');
 const { convertImagesToPDF, convertPDFToPNG } = require('./config/Ghostscript');
-const { createToFill, generateAndReadQr, processPdfWithImages, handleError, ensureDirectoryExists, readTemplateFile, generateQr, dividirEnPaquetes, cambiarFormatoFecha, processCardPackage } = require('./utils');
+const { createToFill, processPdfWithImages, handleError, ensureDirectoryExists, readTemplateFile, generateQr, dividirEnPaquetes, cambiarFormatoFecha, processCardPackage } = require('./utils');
 const WebSocketManager = require('./config/WebSocket');
 
 const router = express.Router();
@@ -50,10 +50,12 @@ router.post('/firmas', async (req, res) => {
 router.post('/modulos', async (req, res) => {
     try {
         const { nombreEmpresa, fecha, modulo } = req.body;
-        const { modulos, firmas, firmaSeleccionada } = getSettings();;
+        const { modulos, firmas, firmaSeleccionada } = getSettings();
         const firmaData = firmas.find(fir => fir.firma === firmaSeleccionada);
 
-        const handler = new TemplateHandler({});
+        const handler = new TemplateHandler({});        
+        
+        const startTime = Date.now();
 
         // Leer archivos
         const file = readTemplateFile(path.join(folderPath, "PlantillaModulo.docx"));
@@ -91,7 +93,7 @@ router.post('/modulos', async (req, res) => {
 
             // Crear objeto toFill para el cliente actual
             const toFill = createToFill(
-                { nombres, cc }, 
+                { nombres, cc },
                 firmaData,
                 client.fecha || fecha,
                 {
@@ -103,7 +105,7 @@ router.post('/modulos', async (req, res) => {
             );
 
             // Generar QR
-            await generateQr(QRTemplateModule(nombres + ' ', cc, 
+            await generateQr(QRTemplateModule(nombres + ' ', cc,
                 `${toFill.dia}/${toFill.mesnum}/${toFill.anio}`, chosenModule.modulo));
 
             const qrfile = readTemplateFile("qr.png");
@@ -136,8 +138,13 @@ router.post('/modulos', async (req, res) => {
             WebSocketManager.send(contador + ' de ' + dataClient.length);
         }
 
+        
+        const endTime = Date.now();
+        const totalTime = ((endTime - startTime) / 1000).toFixed(2); // En segundos
+        
+
         WebSocketManager.send('Ready');
-        res.json({ msg: 'Modulos generados con éxito' });
+        res.json({ msg: `Modulos generados con éxito en ${totalTime} segundos.` });
 
     } catch (error) {
         console.error(error);
@@ -154,6 +161,8 @@ router.post('/certificado', async (req, res) => {
             ...firmas.find(fir => fir.firma === firmaSeleccionada),
             pathFirmaGemsap
         };
+                
+        const startTime = Date.now();
 
         // Crear el objeto toFill usando la función modularizada
         const toFill = createToFill(
@@ -211,8 +220,12 @@ router.post('/certificado', async (req, res) => {
         const outputDir = path.join(resultPath, "images");
         await processPdfWithImages(pdfFilePath, outputDir);
 
+        const endTime = Date.now();
+        const totalTime = ((endTime - startTime) / 1000).toFixed(2); // En segundos
+        
+
         res.status(200).json({ 
-            msg: `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}${fechaDate.getFullYear()}-${cc}.pdf` 
+            msg: `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}${fechaDate.getFullYear()}-${cc}.pdf Completado en ${totalTime} segundos` 
         });
 
     } catch (error) {
@@ -378,6 +391,7 @@ router.post('/carnets', async (req, res) => {
 router.post('/carguemasivo', async (req, res) => {
     try {
         const { nombreEmpresa, fecha } = req.body;
+        const startTime = Date.now();
         
         // Notificar inicio del proceso
         WebSocketManager.send(JSON.stringify({
@@ -551,9 +565,13 @@ router.post('/carguemasivo', async (req, res) => {
 
             contador++;
         }
+        
+        const endTime = Date.now();
+        const totalTime = ((endTime - startTime) / 1000).toFixed(2);
+
 
         WebSocketManager.send('Ready');
-        res.json({ msg: 'Certificados generados con éxito' });
+        res.json({ msg: `${contador} Certificados generados con éxito en ${totalTime} segundos` });
     } catch (error) {
         console.error(error);
         WebSocketManager.send('Error');
