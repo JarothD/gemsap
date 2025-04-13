@@ -9,10 +9,6 @@ const { procesarCargaMasivoBebidas } = require('./controllers/carguemasivobebida
 
 const router = express.Router();
 
-// Rutas de firmas
-router.get('/firmas', obtenerFirmas);
-router.post('/firmas', actualizarFirma);
-
 // Otras rutas
 router.post('/modulos', certificarModulo);
 router.post('/certificado', crearCertificado);
@@ -20,5 +16,9 @@ router.post('/bebidas', crearCertificadoBebidas);
 router.post('/carnets', generarCarnets);
 router.post('/carguemasivo', procesarCargaMasiva);
 router.post('/masivobebidas', procesarCargaMasivoBebidas);
+
+// Rutas de firmas
+router.get('/firmas', obtenerFirmas);
+router.post('/firmas', actualizarFirma);
 
 module.exports = router;
