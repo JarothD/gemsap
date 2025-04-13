@@ -3,20 +3,18 @@ const path = require('path');
 
 const express = require('express');
 const { TemplateHandler, TemplateExtension, MimeType } = require('easy-template-x');
-const QRCode = require('qrcode');
+
 const libre = require('libreoffice-convert');
 const reader = require('xlsx');
 
 const { folderPath, resultPath, resultDrinksPath, cardsPath, meses, getSettings, getBuffer, resultModulePath, saveSettings } = require('./config/Data');
 const { convertImagesToPDF, convertPDFToPNG } = require('./config/Ghostscript');
-const { createToFill, processPdfWithImages, handleError, ensureDirectoryExists, readTemplateFile, generateQr, dividirEnPaquetes, cambiarFormatoFecha, processCardPackage, generateQrBatch, processBatchDocuments, processImageBatch } = require('./utils');
+const { createToFill, processPdfWithImages, handleError, ensureDirectoryExists, readTemplateFile, generateQr, dividirEnPaquetes, cambiarFormatoFecha, processCardPackage } = require('./utils');
 const WebSocketManager = require('./config/WebSocket');
+const { procesarCargaMasiva } = require('./controllers/carguemasivo');
+const { crearCertificado } = require('./controllers/crearcertificado');
 
 const router = express.Router();
-
-/* const QRTemplate = (nombreCompleto, documento, fechaFin) => {
-    return `GEMSAP Certifica Que ${nombreCompleto}, Con Número de Documento ${documento}. Asistió Al Curso De Manipulación Higiénica De Alimentos y BPM. Vàlido Hasta ${fechaFin}. Mayor Información Al WhatsApp 3107089494.`
-}; */
 
 const QRTemplateModule = (nombreCompleto, documento, fechaExp, modulo) => {
     return `GEMSAP Certifica Que ${nombreCompleto}, Con Número de Documento ${documento}. El dia ${fechaExp} Realizo el Modulo ${modulo} Del Curso De Manipulación Higiénica De Alimentos y BPM. Mayor Información Al WhatsApp 3107089494.`
@@ -153,85 +151,7 @@ router.post('/modulos', async (req, res) => {
     }
 });
 
-router.post('/certificado', async (req, res) => {
-    try {
-        const { nombres, apellidos, cc, fecha } = req.body;
-        const { pathFirmaGemsap, firmaSeleccionada, firmas } = getSettings();
-        const firmaData = {
-            ...firmas.find(fir => fir.firma === firmaSeleccionada),
-            pathFirmaGemsap
-        };
-                
-        const startTime = Date.now();
-
-        // Crear el objeto toFill usando la función modularizada
-        const toFill = createToFill(
-            { nombres, apellidos, cc }, 
-            firmaData,
-            fecha
-        );
-
-        // Generar QR
-        await generateQr(QRTemplate(nombres + " " + apellidos, 
-            cc, `${toFill.dia}/${toFill.mesnum}/${toFill.aniov}`));
-
-        const headerExtension = new HeaderExtension();
-        const handler = new TemplateHandler({
-            extensions: {
-                afterCompilation: [headerExtension]
-            }
-        });
-
-        // Leer archivos
-        const file = readTemplateFile(path.join(folderPath, "Plantilla.docx"));
-        const qrfile = readTemplateFile("qr.png");
-
-        // Procesar documento
-        const doc = await handler.process(file, {
-            ...toFill,
-            qr: {
-                _type: "image",
-                source: qrfile,
-                format: MimeType.Png,
-                width: 115,
-                height: 100
-            },
-            qr2: {
-                _type: "image",
-                source: qrfile,
-                format: MimeType.Png,
-                width: 142,
-                height: 142
-            }
-        });
-
-        // Convertir a PDF
-        const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
-
-        // Crear nombre del archivo y ruta
-        const nombresSplitted = nombres.split(' ');
-        const apellidosSplitted = apellidos.split(' ');
-        const fechaDate = new Date(fecha);
-        const pdfFileName = `CMA_${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`;
-        const pdfFilePath = path.join(resultPath, pdfFileName);
-
-        // Guardar PDF y procesar imágenes
-        fs.writeFileSync(pdfFilePath, pdfBuf);
-        const outputDir = path.join(resultPath, "images");
-        await processPdfWithImages(pdfFilePath, outputDir);
-
-        const endTime = Date.now();
-        const totalTime = ((endTime - startTime) / 1000).toFixed(2); // En segundos
-        
-
-        res.status(200).json({ 
-            msg: `${apellidosSplitted[0]}_${nombresSplitted[0]}_${fechaDate.getUTCMonth() + 1}${fechaDate.getFullYear()}-${cc}.pdf Completado en ${totalTime} segundos` 
-        });
-
-    } catch (error) {
-        handleError(res, error);
-    }
-});
+router.post('/certificado', crearCertificado);
 
 router.post('/bebidas', async (req, res) => {
     try {
@@ -388,104 +308,7 @@ router.post('/carnets', async (req, res) => {
     }
 });
 
-router.post('/carguemasivo', async (req, res) => {
-    try {
-        
-        const { nombreEmpresa, fecha } = req.body;
-        const startTime = Date.now();
-
-        // 1. Preparar directorios
-        const qrDir = path.join(resultPath, nombreEmpresa, 'qrs_temp');
-        const outputDir = path.join(resultPath, nombreEmpresa);
-        const tempDir = path.join(resultPath, nombreEmpresa, 'temp');
-        ensureDirectoryExists(qrDir);
-        ensureDirectoryExists(outputDir);
-        ensureDirectoryExists(tempDir);
-
-        // 2. Cargar datos y configuración
-        const { pathFirmaGemsap, firmaSeleccionada, firmas } = getSettings();
-        const firmaData = firmas.find(fir => fir.firma === firmaSeleccionada);
-        const file = fs.readFileSync(folderPath + '/PlantillaSimple.docx');
-        const plantillaX = reader.readFile(folderPath + '/Cargue_Masivo.xlsx');
-        const dataClient = reader.utils.sheet_to_json(plantillaX.Sheets['data']);
-
-        // 3. Generar QRs en batch
-        WebSocketManager.send(JSON.stringify({
-            type: 'progress',
-            message: 'Generando códigos QR en batch...'
-        }));
-        const qrResults = await generateQrBatch(dataClient, fecha, qrDir);
-
-        // 4. Preparar datos base
-        const toFillBase = {
-            nombreFirma: firmaData.nombreFirma,
-            tituloFirma: firmaData.tituloFirma,
-            tarjetaProfesional: firmaData.tarjetaProfesional,
-            firmaGemsap: {
-                _type: 'image',
-                source: getBuffer(pathFirmaGemsap),
-                format: MimeType.Png,
-                width: 166,
-                height: 106
-            },
-            firma: {
-                _type: 'image',
-                source: getBuffer(firmaData.pathFirma),
-                format: MimeType.Png,
-                width: 170,
-                height: 110
-            }
-        };
-
-        // 5. Procesar documentos en batch
-        WebSocketManager.send(JSON.stringify({
-            type: 'progress',
-            message: 'Procesando documentos en batch...'
-        }));
-        const pdfResults = await processBatchDocuments(
-            dataClient, 
-            file, 
-            toFillBase, 
-            qrResults, 
-            outputDir,
-            fecha,  // Add fecha parameter
-            meses   // Add meses parameter
-        );
-
-        // 6. Procesar imágenes en batch
-        WebSocketManager.send(JSON.stringify({
-            type: 'progress',
-            message: 'Procesando imágenes en batch...'
-        }));
-        await processImageBatch(pdfResults, tempDir);
-
-        // 7. Limpieza final con manejo de errores
-        try {
-            if (fs.existsSync(qrDir)) {
-                fs.rmSync(qrDir, { recursive: true, force: true });
-            }
-            if (fs.existsSync(tempDir)) {
-                fs.rmSync(tempDir, { recursive: true, force: true });
-            }
-        } catch (cleanupError) {
-            console.log('Aviso: Error en limpieza final:', cleanupError.code);
-            // Continuar con el proceso incluso si la limpieza falla
-        }
-
-        const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
-        
-
-        WebSocketManager.send('Ready');
-        res.json({ 
-            msg: `${dataClient.length} Certificados generados con éxito en ${totalTime} segundos`
-        });
-
-    } catch (error) {
-        console.error(error);
-        WebSocketManager.send('Error');
-        res.status(500).json({ error: error.message });
-    }
-});
+router.post('/carguemasivo', procesarCargaMasiva);
 
 router.post('/masivobebidas', async (req, res) => {
     try {

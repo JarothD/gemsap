@@ -1,13 +1,12 @@
-const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
 
+const QRCode = require('qrcode');
 const libre = require('libreoffice-convert');
+const { MimeType, TemplateHandler } = require('easy-template-x');
 
 const { convertImagesToPDF, convertPDFToPNG } = require('./config/Ghostscript');
-const { /* TemplateHandler, TemplateExtension, */ MimeType, TemplateHandler } = require('easy-template-x');
-
-const { /* folderPath, resultPath, resultDrinksPath, cardsPath,  */meses, /* getSettings, */ getBuffer/* , resultModulePath, saveSettings */ } = require('./config/Data');
+const { meses, getBuffer } = require('./config/Data');
 
 const QRTemplate = (nombreCompleto, documento, fechaFin) => {
     return `GEMSAP Certifica Que ${nombreCompleto}, Con Número de Documento ${documento}. Asistió Al Curso De Manipulación Higiénica De Alimentos y BPM. Vàlido Hasta ${fechaFin}. Mayor Información Al WhatsApp 3107089494.`
