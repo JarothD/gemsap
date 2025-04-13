@@ -89,6 +89,16 @@ const CargueMasivoBebidas = () => {
                 })
                 return;
             }
+            // Mostrar Swal al inicio del proceso
+            Swal.fire({
+                title: 'Generando Certificados',
+                html: 'Iniciando proceso...',
+                allowEscapeKey: false,
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading()
+                }
+            });
             cargueMasivoBebidas(datos)
         } catch (error) {
             console.log(error)
