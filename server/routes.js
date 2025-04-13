@@ -13,6 +13,8 @@ const { createToFill, processPdfWithImages, handleError, ensureDirectoryExists, 
 const WebSocketManager = require('./config/WebSocket');
 const { procesarCargaMasiva } = require('./controllers/carguemasivo');
 const { crearCertificado } = require('./controllers/crearcertificado');
+const { generarCarnets } = require('./controllers/carnets');
+const { certificarModulo } = require('./controllers/certificarmodulo');
 
 const router = express.Router();
 
@@ -45,111 +47,7 @@ router.post('/firmas', async (req, res) => {
     }
 })
 
-router.post('/modulos', async (req, res) => {
-    try {
-        const { nombreEmpresa, fecha, modulo } = req.body;
-        const { modulos, firmas, firmaSeleccionada } = getSettings();
-        const firmaData = firmas.find(fir => fir.firma === firmaSeleccionada);
-
-        const handler = new TemplateHandler({});        
-        
-        const startTime = Date.now();
-
-        // Leer archivos
-        const file = readTemplateFile(path.join(folderPath, "PlantillaModulo.docx"));
-        const plantillaX = reader.readFile(path.join(folderPath, "Cargue_Modulo.xlsx"));
-        const clientsSheet = plantillaX.Sheets['data'];
-        const dataClient = reader.utils.sheet_to_json(clientsSheet);
-
-        // Crear objeto base para toFill
-        const chosenModule = modulos.find(toFind => toFind.modulo == modulo);
-        const toFillBase = {
-            nombreFirma: firmaData.nombreFirma,
-            tituloFirma: firmaData.tituloFirma,
-            tarjetaProfesional: firmaData.tarjetaProfesional,
-            firma: {
-                _type: 'image',
-                source: getBuffer(firmaData.pathFirma),
-                format: MimeType.Png,
-                width: 170,
-                height: 110
-            },
-            modulo: chosenModule.modulo,
-            temas: chosenModule.temas,
-            horas: chosenModule.horas
-        };
-
-        // Crear directorio si no existe
-        ensureDirectoryExists(path.join(resultModulePath, nombreEmpresa));
-
-        let contador = 1;
-        WebSocketManager.send(contador + ' de ' + dataClient.length);
-
-        for (const client of dataClient) {
-            let { nombres, cc } = client;
-            nombres = nombres.toUpperCase();
-
-            // Crear objeto toFill para el cliente actual
-            const toFill = createToFill(
-                { nombres, cc },
-                firmaData,
-                client.fecha || fecha,
-                {
-                    ...toFillBase,
-                    modulo: chosenModule.modulo,
-                    temas: chosenModule.temas,
-                    horas: chosenModule.horas
-                }
-            );
-
-            // Generar QR
-            await generateQr(QRTemplateModule(nombres + ' ', cc,
-                `${toFill.dia}/${toFill.mesnum}/${toFill.anio}`, chosenModule.modulo));
-
-            const qrfile = readTemplateFile("qr.png");
-
-            // Procesar documento
-            const doc = await handler.process(file, {
-                ...toFill,
-                qr: {
-                    _type: 'image',
-                    source: qrfile,
-                    format: MimeType.Png,
-                    width: 140,
-                    height: 140
-                }
-            });
-
-            // Convertir a PDF
-            const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
-
-            // Crear nombre del archivo y ruta
-            const pdfFileName = `${nombreEmpresa}/M${modulo}_${toFill.nombre}_${toFill.mesnum}_${toFill.anio}_${cc}.pdf`;
-            const pdfFilePath = path.join(resultModulePath, pdfFileName);
-
-            // Guardar PDF y procesar imágenes
-            fs.writeFileSync(pdfFilePath, pdfBuf);
-            const outputDir = path.join(resultModulePath, "images");
-            await processPdfWithImages(pdfFilePath, outputDir);
-
-            contador++;
-            WebSocketManager.send(contador + ' de ' + dataClient.length);
-        }
-
-        
-        const endTime = Date.now();
-        const totalTime = ((endTime - startTime) / 1000).toFixed(2); // En segundos
-        
-
-        WebSocketManager.send('Ready');
-        res.json({ msg: `Modulos generados con éxito en ${totalTime} segundos.` });
-
-    } catch (error) {
-        console.error(error);
-        WebSocketManager.send('Error');
-        handleError(res, error);
-    }
-});
+router.post('/modulos', certificarModulo);
 
 router.post('/certificado', crearCertificado);
 
@@ -227,86 +125,7 @@ router.post('/bebidas', async (req, res) => {
     }
 });
 
-router.post('/carnets', async (req, res) => {
-    try {
-        const { nombreEmpresa } = req.body;
-        const { pathFirmaGemsap, firmaSeleccionada, firmas } = getSettings();
-        const firmaData = firmas.find(fir => fir.firma === firmaSeleccionada);
-
-        // Inicializar el handler con HeaderExtension
-        const headerExtension = new HeaderExtension();
-        const handler = new TemplateHandler({
-            extensions: {
-                afterCompilation: [headerExtension]
-            }
-        });
-
-        // Leer archivos
-        const file = readTemplateFile(path.join(folderPath, "PlantillaCarnets.docx"));
-        const plantillaX = reader.readFile(path.join(folderPath, "Cargue_Carnets.xlsx"));
-        const clientsSheet = plantillaX.Sheets['data'];
-        const dataClient = reader.utils.sheet_to_json(clientsSheet);
-
-        // Crear objeto base
-        const toFillBase = {
-            nombreFirma: firmaData.nombreFirma,
-            tituloFirma: firmaData.tituloFirma,
-            tarjetaProfesional: firmaData.tarjetaProfesional,
-            firmaGemsap: {
-                _type: 'image',
-                source: getBuffer(pathFirmaGemsap),
-                format: MimeType.Png,
-                width: 166,
-                height: 106
-            },
-            firma: {
-                _type: 'image',
-                source: getBuffer(firmaData.pathFirma),
-                format: MimeType.Png,
-                width: 170,
-                height: 110
-            }
-        };
-
-        // Crear directorio si no existe
-        ensureDirectoryExists(path.join(cardsPath, nombreEmpresa));
-
-        let contador = 1;
-        WebSocketManager.send(contador + ' de ' + dataClient.length);
-
-        // Dividir clientes en paquetes de 4
-        const paquetes = dividirEnPaquetes(dataClient, 4);
-
-        // Procesar cada paquete
-        for (let index = 0; index < paquetes.length; index++) {
-            // Procesar el paquete actual
-            const toFill = await processCardPackage(paquetes[index], toFillBase, QRTemplate);
-
-            // Generar documento
-            const doc = await handler.process(file, toFill);
-            const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
-
-            // Guardar y procesar PDF
-            const pdfFileName = `${nombreEmpresa}/Paquete${index}.pdf`;
-            const pdfFilePath = path.join(cardsPath, pdfFileName);
-            fs.writeFileSync(pdfFilePath, pdfBuf);
-
-            // Procesar imágenes
-            const outputDir = path.join(cardsPath, "images");
-            await processPdfWithImages(pdfFilePath, outputDir);
-
-            contador += paquetes[index].length;
-            WebSocketManager.send(contador + ' de ' + dataClient.length);
-        }
-
-        WebSocketManager.send('Ready');
-        res.json({ msg: 'Certificados generados con éxito' });
-    } catch (error) {
-        console.error(error);
-        WebSocketManager.send('Error');
-        handleError(res, error);
-    }
-});
+router.post('/carnets', generarCarnets);
 
 router.post('/carguemasivo', procesarCargaMasiva);
 
