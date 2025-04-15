@@ -115,59 +115,61 @@ const CertificarModulo = () => {
 
     return ( 
     <div id='crear-certificado'>
-        <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px"></img>
+        <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px" id='logo-empresa'></img>
         <form 
             id='form-certificado'
             autoComplete='off'
             onSubmit={onSubmit}>
             {<NavMenu actualPage={actualPage}/>}
-            <div id='contenedor-titulo'>
-                        <h3><strong>Certificado Modular</strong></h3>
-            </div>
-            <div id='contenedor-form'>
-                <label>
-                    Nombre Empresa: 
-                </label>
-                <input 
+                <div id='contenedor-titulo'>
+                            <h3><strong>Certificado Modular</strong></h3>
+                </div>
+            <div id='form'>
+                <div id='contenedor-form'>
+                    <label>
+                        Nombre Empresa: 
+                    </label>
+                    <input 
+                        id='input-form'
+                        name='nombreEmpresa'
+                        onChange={onChange}
+                        value={datos.nombreEmpresa}
+                        autoComplete='off'
+                        type='text'
+                    />
+                </div>
+                <div id='contenedor-form'>
+                    <label>
+                        Modulo
+                    </label>
+                    <select 
                     id='input-form'
-                    name='nombreEmpresa'
+                    name='modulo'
                     onChange={onChange}
-                    value={datos.nombreEmpresa}
                     autoComplete='off'
-                    type='text'
-                />
+                    value={datos.modulo}
+                    >
+                        <option>1</option>
+                        <option>2</option>
+                        <option>3</option>
+                    </select>
+                </div>
+                
+                <div id='contenedor-form'>
+                    <label>
+                        Fecha Expedición: 
+                    </label>
+                    <input 
+                        id='input-form'
+                        name='fecha'
+                        value={datos.fecha}
+                        autoComplete='off'
+                        onChange={onChange}
+                        type='date'
+                    />
+                </div>
+                <button id='boton-form' type='submit'>Crear Modulos</button>
             </div>
-            <div id='contenedor-form'>
-                <label>
-                    Modulo
-                </label>
-                <select 
-                id='input-form'
-                name='modulo'
-                onChange={onChange}
-                autoComplete='off'
-                value={datos.modulo}
-                >
-                    <option>1</option>
-                    <option>2</option>
-                    <option>3</option>
-                </select>
-            </div>
-            
-            <div id='contenedor-form'>
-                <label>
-                    Fecha Expedición: 
-                </label>
-                <input 
-                    id='input-form'
-                    name='fecha'
-                    value={datos.fecha}
-                    autoComplete='off'
-                    onChange={onChange}
-                    type='date'
-                />
-            </div>
-            <button id='boton-form' type='submit'>Crear Modulos</button>
         </form>
     </div> 
     );

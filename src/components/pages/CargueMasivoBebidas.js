@@ -120,14 +120,15 @@ const CargueMasivoBebidas = () => {
     // El return se mantiene igual
     return ( 
         <div id='crear-certificado'>
-            <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px"></img>
+            <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px" id='logo-empresa'></img>
             <form
                 onSubmit={onSubmit}
                 id='form-certificado'>
-                    <NavMenu actualPage={actualPage}/>
+                    {<NavMenu actualPage={actualPage}/>}
                     <div id='contenedor-titulo'>
-                    <h3><strong>Bebidas Grupal</strong></h3>
-                </div>
+                        <h3><strong>Bebidas Grupal</strong></h3>
+                    </div>
+                    <div id='form'>
                 <div id='contenedor-form'>
                     <label>
                         Nombre Empresa:
@@ -155,6 +156,7 @@ const CargueMasivoBebidas = () => {
                     />
                 </div>
                 <button id='boton-form' type='submit'>Certificar</button>
+                </div>
             </form>
         </div>  
     );

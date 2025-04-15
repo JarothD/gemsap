@@ -129,68 +129,70 @@ const CrearCertificado = () => {
     return (
         <div 
             id='crear-certificado'>        
-                    <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px"></img>
+                    <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px" id='logo-empresa'></img>
             <form
                 onSubmit={onSubmit}
                 autoComplete='off'
                 id='form-certificado'>
-                    {/* <h2>Crear Certificado</h2> */}
+                    
                     {<NavMenu actualPage={actualPage}/>}
                     <div id='contenedor-titulo'>
                         <h3><strong>Certificado Individual</strong></h3>
                     </div>
-                    <div id='contenedor-form'>
-                        <label>
-                            Nombres:
-                        </label>
-                        <input 
-                            id='input-form' 
-                            name='nombres'
-                            onChange={onChange}
-                            value={datos.nombres}
-                            type='text'
-                            autoComplete='off'
-                            
-                        />
-                    </div>
-                    <div id='contenedor-form'>
-                        <label>
-                            Apellidos:
-                        </label>
-                        <input 
-                            id='input-form' 
-                            name='apellidos'
-                            onChange={onChange}
-                            value={datos.apellidos}
-                            type='text' 
-                            autoComplete='off'
-                        />
-                    </div>
-                    <div id='contenedor-form'>
-                        <label>
-                            Cédula de Ciudadanía:
-                        </label>
-                        <input 
-                            id='input-form' 
-                            name='cc'
-                            onChange={onChange}
-                            value={datos.cc}
-                            type='number'   
-                            autoComplete='off'                     
-                        />
-                    </div>
-                    <div id='contenedor-form'>
-                        <label>
-                            Fecha Expedición:
-                        </label>
-                        <input 
-                            id='input-form' 
-                            name='fecha'
-                            value={datos.fecha}
-                            onChange={onChange}
-                            type='date'
-                            autoComplete='off'
-                        />
+                    <div id='form'>
+                        <div id='contenedor-form'>
+                            <label>
+                                Nombres:
+                            </label>
+                            <input 
+                                id='input-form' 
+                                name='nombres'
+                                onChange={onChange}
+                                value={datos.nombres}
+                                type='text'
+                                autoComplete='off'
+                                
+                            />
+                        </div>
+                        <div id='contenedor-form'>
+                            <label>
+                                Apellidos:
+                            </label>
+                            <input 
+                                id='input-form' 
+                                name='apellidos'
+                                onChange={onChange}
+                                value={datos.apellidos}
+                                type='text' 
+                                autoComplete='off'
+                            />
+                        </div>
+                        <div id='contenedor-form'>
+                            <label>
+                                Cédula de Ciudadanía:
+                            </label>
+                            <input 
+                                id='input-form' 
+                                name='cc'
+                                onChange={onChange}
+                                value={datos.cc}
+                                type='number'   
+                                autoComplete='off'                     
+                            />
+                        </div>
+                        <div id='contenedor-form'>
+                            <label>
+                                Fecha Expedición:
+                            </label>
+                            <input 
+                                id='input-form' 
+                                name='fecha'
+                                value={datos.fecha}
+                                onChange={onChange}
+                                type='date'
+                                autoComplete='off'
+                            />
+                        </div>
                     </div>
                     
                     <button id='boton-form' type='submit'>Certificar</button>                    

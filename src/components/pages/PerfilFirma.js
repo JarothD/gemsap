@@ -43,9 +43,10 @@ const PerfilFirma = () => {
         
     return ( 
         <div id='crear-certificado'>
-        <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px"></img>
+        <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px" id='logo-empresa'></img>
         <form id='form-certificado' onSubmit={onSubmit}>
             {<NavMenu actualPage={actualPage} />}
+            <div id='form'>
             <div id='contenedor-titulo'>
                 <h3 style={{textAlign: 'center'}}><strong>Cambiar Perfíl Firma</strong></h3>
             </div>
@@ -62,6 +63,7 @@ const PerfilFirma = () => {
                 </select>
             </div>
             <button id='boton-form' type='submit'>Cambiar Perfíl</button>
+            </div>
         </form>
     </div>
     );
