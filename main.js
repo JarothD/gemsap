@@ -48,6 +48,7 @@ async function createWindow() {
     minHeight: Math.round(workArea.height * 0.3), 
     maxWidth: Math.round(workArea.width * 0.4), 
     maxHeight: Math.round(workArea.height * 0.9),
+    icon: path.join(__dirname, "public/favicon.ico"),
     //show: false, // Ocultamos la ventana inicialmente
     webPreferences: {
       nodeIntegration: false,
