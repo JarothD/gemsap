@@ -38,15 +38,15 @@ async function createWindow() {
   const { workArea } = primaryDisplay;
 
   // Calcular dimensiones proporcionales
-  const width = Math.round(workArea.width * 0.4); // 40% del ancho de la pantalla
-  const height = Math.round(workArea.height * 0.6); // 60% del alto de la pantalla
+  const width = Math.round(workArea.width * 0.5); // 40% del ancho de la pantalla
+  const height = Math.round(workArea.height * 0.3); // 60% del alto de la pantalla
 
   mainWindow = new BrowserWindow({
     width,
     height,
     minWidth: Math.round(workArea.width * 0.3), 
     minHeight: Math.round(workArea.height * 0.3), 
-    maxWidth: Math.round(workArea.width * 0.4), 
+    maxWidth: Math.round(workArea.width * 0.5), 
     maxHeight: Math.round(workArea.height * 0.9),
     icon: path.join(__dirname, "public/favicon.ico"),
     //show: false, // Ocultamos la ventana inicialmente
