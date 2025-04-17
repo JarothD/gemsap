@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import Swal from 'sweetalert2';
 
+import SwalAlert from '../util/Swal';
 import NavMenu from '../util/NavMenu';
 import { llenarDocx } from '../util/DocxToPdf';
 
@@ -28,62 +28,25 @@ const CrearCertificadoBebidas = () => {
 
     const onSubmit = async e => {
         e.preventDefault();        
-        Swal.fire({
-            title: 'Generando Certificado',
-            html: 'Cargando...',
-            allowEscapeKey: false,
-            allowOutsideClick: false,
-            didOpen: () => {
-              Swal.showLoading()
-            }
-          });
+        SwalAlert.loading();
         try {
-            if(datos.nombres.length < 2 ){
-                Swal.fire({
-                    icon:'error',
-                    title:'Oops...',
-                    text: 'Los nombres deben tener más de 2 caracteres',
-                    didOpen: () => {
-                        Swal.hideLoading()
-                      }
-                })    
-    
+            if(datos.nombres.length < 2){
+                await SwalAlert.validations.nombres();
+                return;
             }
-           else if(datos.apellidos.length < 2){
-                Swal.fire({
-                    icon:'error',
-                    title:'Oops...',
-                    text: 'Un apellido debe tener al menos 2 caracteres',
-                    didOpen: () => {
-                        Swal.hideLoading()
-                      }
-                })
-    
+            if(datos.apellidos.length < 2){
+                await SwalAlert.validations.apellidos();
+                return;
             }
-           else if(datos.cc.length < 4){
-                Swal.fire({
-                    icon:'error',
-                    title:'Oops...',
-                    text: 'El documento debe ser mayor a 4 digitos',
-                    didOpen: () => {
-                        Swal.hideLoading()
-                      }
-                })
-    
-            }else {
-                llenarDocx(datos, "Bebidas")
-                
+            if(datos.cc.length < 4){
+                await SwalAlert.validations.cedula();
+                return;
+            } else {
+                await llenarDocx(datos, "Bebidas")
             }
             
         } catch (error) {
-            Swal.fire({
-                icon:'error',
-                title:'Ooops',
-                text: 'Algo ha sucedido...',
-                didOpen: () => {
-                    Swal.hideLoading()
-                  } 
-            })
+            await SwalAlert.error();
         }
     }
 

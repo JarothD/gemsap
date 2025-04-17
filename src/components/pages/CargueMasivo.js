@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import Swal from 'sweetalert2'
 
+import SwalAlert from '../util/Swal';
 import { cargueMasivo } from '../util/DocxToPdf';
 import wss from '../../config/wss'
 import NavMenu from '../util/NavMenu';
@@ -17,22 +17,7 @@ const CargueMasivo = () => {
                 const messageData = JSON.parse(data);
                 if (messageData.type === 'progress') {
                     setCargando(messageData.message);
-                    Swal.fire({
-                        title: 'Generando Certificados',
-                        html: `
-                            <div class="progress-info">
-                                <p>${messageData.message}</p>
-                                ${messageData.counter ? 
-                                    `<p class="counter">${messageData.counter}</p>` 
-                                    : ''}
-                            </div>
-                        `,
-                        allowEscapeKey: false,
-                        allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading()
-                        }
-                    });
+                    SwalAlert.progress(messageData);
                 }
             } catch (e) {
                 // Si no es JSON, manejar como antes
@@ -40,14 +25,7 @@ const CargueMasivo = () => {
                     setCargando('Proceso completado');
                     Swal.close();
                 } else if(data === 'Error') {
-                    Swal.fire({
-                        icon:'error',
-                        title:'Oops...',
-                        text: 'Verifique la existencia de Cargue_Masivo.xlsx y PlantillaSimple.docx',
-                        didOpen: () => {
-                            Swal.hideLoading()
-                        }
-                    });
+                    SwalAlert.validations.archivos();
                     wss.send('Ready');
                 }
             }
@@ -81,35 +59,16 @@ const CargueMasivo = () => {
 
     const onSubmit = async e => {
         e.preventDefault();
-        Swal.fire({
-            title: 'Generando Certificado',
-            html: 'Cargando...',
-            allowEscapeKey: false,
-            allowOutsideClick: false,
-            didOpen: () => {
-              Swal.showLoading()
-            }
-          });
+        SwalAlert.loading();
         try {
             if(datos.nombreEmpresa.length < 2){
-                Swal.fire({
-                    icon:'error',
-                    title:'Oops...',
-                    text: 'Nombre de Empresa debe tener más de 2 caracteres',
-                    didOpen: () => {
-                        Swal.hideLoading()
-                      }
-                })
+                await SwalAlert.validations.nombreEmpresa();
                 return;  
             }
-            cargueMasivo(datos)
+            await cargueMasivo(datos);
         } catch (error) {
-            console.log(error)
-            Swal.fire({
-                icon:'error',
-                title:'Ooops',
-                text: 'Algo ha sucedido...' 
-            })
+            console.log(error);
+            await SwalAlert.error();
         }
 
     }

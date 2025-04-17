@@ -26,7 +26,7 @@ const procesarCargaMasivoBebidas = async (req, res) => {
     try {
         const { nombreEmpresa, fecha } = req.body;
         const startTime = Date.now();
-
+        console.log('Comienza cargue masivo')
         // 1. Preparar directorios
         const qrDir = path.join(resultDrinksPath, nombreEmpresa, 'qrs_temp');
         const outputDir = path.join(resultDrinksPath, nombreEmpresa);
