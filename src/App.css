@@ -135,7 +135,7 @@ h3 {
   #logo-principal {
     height: 2.4rem;
     padding: 0;
-    margin-left: -1rem;
+    
   }
 
   label {
@@ -150,7 +150,13 @@ h3 {
     justify-content: center;
   }
 
-  h3 {
+  #boton-form {
+    width: 60%;
+    height: 3rem;    
+    margin-top: 0;
+    padding: 0;
+    display: block;
+    font-size: 0.8rem;
     
   }
 

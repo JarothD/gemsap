@@ -168,8 +168,8 @@ const CertificarModulo = () => {
                         type='date'
                     />
                 </div>
-                <button id='boton-form' type='submit'>Crear Modulos</button>
             </div>
+                <button id='boton-form' type='submit'>Crear Modulos</button>
         </form>
     </div> 
     );

@@ -113,8 +113,8 @@ const CargueMasivoBebidas = () => {
                         autoComplete='off'
                     />
                 </div>
-                <button id='boton-form' type='submit'>Certificar</button>
                 </div>
+                <button id='boton-form' type='submit'>Certificar</button>
             </form>
         </div>  
     );

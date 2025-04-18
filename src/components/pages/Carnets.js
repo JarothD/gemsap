@@ -117,23 +117,23 @@ const Carnets = () => {
         onSubmit={onSubmit}
             id='form-certificado'>
                 {<NavMenu actualPage={actualPage}/>}
+                    <div id='contenedor-titulo'>
+                        <h3><strong>Carnets Grupal</strong></h3>
+                    </div>
                 <div id='form'>
-                <div id='contenedor-titulo'>
-                <h3><strong>Carnets Grupal</strong></h3>
-            </div>
-            <div id='contenedor-form'>
-                <label>
-                    Nombre Empresa:
-                </label>
-                <input 
-                    id='input-form' 
-                    name='nombreEmpresa'
-                    onChange={onChange}
-                    value={datos.nombreEmpresa}
-                    type='text'
-                    autoComplete='off'
-                />
-            </div>
+                    <div id='contenedor-form'>
+                        <label>
+                            Nombre Empresa:
+                        </label>
+                        <input 
+                            id='input-form' 
+                            name='nombreEmpresa'
+                            onChange={onChange}
+                            value={datos.nombreEmpresa}
+                            type='text'
+                            autoComplete='off'
+                        />
+                    </div>
             {/* <div id='contenedor-form'>
                 <label>
                     Fecha Expedición:
@@ -147,8 +147,8 @@ const Carnets = () => {
                     autoComplete='off'
                 />
             </div> */}
-            <button id='boton-form' type='submit'>Certificar</button>
             </div>
+            <button id='boton-form' type='submit'>Certificar</button>
         </form>
     </div> 
      );

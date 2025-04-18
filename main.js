@@ -74,32 +74,6 @@ async function createWindow() {
   mainWindow.setPosition(x, y);
   mainWindow.show();
 
-  // Añadir manejador para el evento maximize
-  /* mainWindow.on('maximize', () => {
-    console.log('Evento maximize activado');
-    const { workArea } = screen.getPrimaryDisplay();
-    const bounds = mainWindow.getBounds();
-    
-    // Primero desmaximizamos la ventana
-    mainWindow.unmaximize();
-    
-    // Calculamos las nuevas dimensiones
-    const newBounds = {
-      x: workArea.x + workArea.width - bounds.width,
-      y: 0, // Mantenemos la ventana en la parte superior
-      width: bounds.width,
-      height: workArea.height // Usamos toda la altura disponible
-    };
-    
-    console.log('Nuevas dimensiones a aplicar:', newBounds);
-    
-    // Aplicamos las nuevas dimensiones
-    setTimeout(() => {
-      mainWindow.setBounds(newBounds);
-      console.log('Dimensiones finales:', mainWindow.getBounds());
-    }, 100); // Pequeño retraso para asegurar que unmaximize se complete
-  }); */
-
   // Deshabilitar el caché
   mainWindow.webContents.session.clearCache();
 

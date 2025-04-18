@@ -110,6 +110,7 @@ export async function cargueMasivo(data){
                 Swal.hideLoading()
               }
         })
+        return respuesta.data.outputDir
 
         
         

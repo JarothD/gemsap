@@ -19,6 +19,7 @@ const {
     getBuffer 
 } = require('../config/Data');
 
+
 const procesarCargaMasiva = async (req, res) => {
     try {
         const { nombreEmpresa, fecha } = req.body;
@@ -104,8 +105,10 @@ const procesarCargaMasiva = async (req, res) => {
         const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
 
         WebSocketManager.send('Ready');
+        
         res.json({ 
-            msg: `${dataClient.length} Certificados generados con éxito en ${totalTime} segundos`
+            msg: `${dataClient.length} Certificados generados con éxito en ${totalTime} segundos`,
+            outputDir
         });
 
     } catch (error) {

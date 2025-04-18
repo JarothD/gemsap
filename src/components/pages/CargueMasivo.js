@@ -65,7 +65,8 @@ const CargueMasivo = () => {
                 await SwalAlert.validations.nombreEmpresa();
                 return;  
             }
-            await cargueMasivo(datos);
+            const outputDir = await cargueMasivo(datos);
+            
         } catch (error) {
             console.log(error);
             await SwalAlert.error();
@@ -121,8 +122,8 @@ const CargueMasivo = () => {
                         autoComplete='off'
                     />
                 </div>
-                <button id='boton-form' type='submit'>Certificar</button>
                 </div>
+                <button id='boton-form' type='submit'>Certificar</button>
                 {/* // Añadir "PISTA" de archivo excel */}
         </form>
     </div> 
