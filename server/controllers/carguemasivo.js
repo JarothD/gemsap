@@ -48,6 +48,10 @@ const procesarCargaMasiva = async (req, res) => {
         const qrResults = await generateQrBatch(dataClient, fecha, qrDir);
 
         // 4. Preparar datos base
+        WebSocketManager.send(JSON.stringify({
+            type: 'progress',
+            message: 'Preparando datos de certificados...'
+        }));
         const toFillBase = {
             nombreFirma: firmaData.nombreFirma,
             tituloFirma: firmaData.tituloFirma,
@@ -91,6 +95,10 @@ const procesarCargaMasiva = async (req, res) => {
         await processImageBatch(pdfResults, tempDir);
 
         // 7. Limpieza final con manejo de errores
+        WebSocketManager.send(JSON.stringify({
+            type: 'progress',
+            message: 'Finalizando proceso y limpiando archivos temporales...'
+        }));
         try {
             if (fs.existsSync(qrDir)) {
                 fs.rmSync(qrDir, { recursive: true, force: true });
@@ -104,8 +112,13 @@ const procesarCargaMasiva = async (req, res) => {
 
         const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
 
-        WebSocketManager.send('Ready');
-        
+        // Final completion message 
+        WebSocketManager.send(JSON.stringify({
+            type: 'status',
+            status: 'ready',
+            message: `${dataClient.length} Certificados generados con éxito en ${totalTime} segundos`
+        }));
+
         res.json({ 
             msg: `${dataClient.length} Certificados generados con éxito en ${totalTime} segundos`,
             outputDir

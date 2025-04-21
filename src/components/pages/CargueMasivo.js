@@ -1,44 +1,54 @@
 import React, { useState, useEffect } from 'react'
-
 import SwalAlert from '../util/Swal';
 import { cargueMasivo } from '../util/DocxToPdf';
-import wss from '../../config/wss'
+import wsClient from '../../config/wss'
 import NavMenu from '../util/NavMenu';
+import useWebSocket from '../../hooks/useWebSocket';
+
+// Helper function for better object logging
+const formatLog = (obj) => {
+    try {
+        if (typeof obj === 'object' && obj !== null) {
+            return JSON.stringify(obj);
+        }
+        return String(obj);
+    } catch (e) {
+        return `[Non-serializable object: ${e.message}]`;
+    }
+};
 
 const CargueMasivo = () => {
     const actualPage = 'AlimentosMasivo'
     const [cargando, setCargando] = useState('Cargando...')
+    
+    // Use our WebSocket hook
+    const { lastMessage, connected } = useWebSocket();
 
-    // Usar useEffect para manejar la suscripción al WebSocket
+    // Respond to WebSocket messages for UI updates (not Swal - that's handled globally)
     useEffect(() => {
-        const handleMessage = (data) => {
-            try {
-                // Intentar parsear el mensaje como JSON
-                const messageData = JSON.parse(data);
-                if (messageData.type === 'progress') {
-                    setCargando(messageData.message);
-                    SwalAlert.progress(messageData);
-                }
-            } catch (e) {
-                // Si no es JSON, manejar como antes
-                if(data === 'Ready') {
-                    setCargando('Proceso completado');
-                    Swal.close();
-                } else if(data === 'Error') {
-                    SwalAlert.validations.archivos();
-                    wss.send('Ready');
-                }
+        if (!lastMessage) return;
+        
+        try {
+            console.log('WebSocket message received in CargueMasivo:', 
+                typeof lastMessage === 'object' ? formatLog(lastMessage) : lastMessage);
+            
+            // Handle progress updates for component state
+            if (typeof lastMessage === 'string') {
+                setCargando(lastMessage);
+            } else if (lastMessage.type === 'progress') {
+                setCargando(lastMessage.message || 'Procesando...');
+            } else if (lastMessage.message) {
+                setCargando(lastMessage.message);
             }
-        };
-
-        // Subscribirse a los mensajes
-        wss.addMessageHandler(handleMessage);
-
-        // Cleanup: remover el handler cuando el componente se desmonte
-        return () => {
-            wss.removeMessageHandler(handleMessage);
-        };
-    }, []); // Array vacío significa que solo se ejecuta al montar/desmontar
+            
+            // Handle completion
+            if (lastMessage === 'Ready' || (lastMessage.type === 'status' && lastMessage.status === 'ready')) {
+                setCargando('Proceso completado');
+            }
+        } catch (error) {
+            console.error('Error processing WebSocket message:', error);
+        }
+    }, [lastMessage]);
 
     let fechaActual = new Date()
     let anio = fechaActual.getFullYear(),
@@ -57,23 +67,6 @@ const CargueMasivo = () => {
         fecha: format
     })
 
-    const onSubmit = async e => {
-        e.preventDefault();
-        SwalAlert.loading();
-        try {
-            if(datos.nombreEmpresa.length < 2){
-                await SwalAlert.validations.nombreEmpresa();
-                return;  
-            }
-            const outputDir = await cargueMasivo(datos);
-            
-        } catch (error) {
-            console.log(error);
-            await SwalAlert.error();
-        }
-
-    }
-
     const onChange = e => {        
         setDatos({
             ...datos,
@@ -81,53 +74,82 @@ const CargueMasivo = () => {
         })        
     }
 
-    return ( 
-    <div
-        id='crear-certificado'>
-            <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px" id='logo-empresa'></img>
-        <form 
-            autoComplete='off'
-            onSubmit={onSubmit} 
-            id='form-certificado'>
-            {/* <Link to='/'>Cargue Individual</Link> */}
-            {<NavMenu actualPage={actualPage}/>}
-            <div id='contenedor-titulo'>
-                <h3><strong>Certificado Grupal</strong></h3>
-            </div>
-            <div id='form'>
-                <div id='contenedor-form'>
-                    <label>
-                        Nombre Empresa:
-                    </label>
-                    <input 
-                        id='input-form' 
-                        name='nombreEmpresa'
-                        onChange={onChange}
-                        value={datos.nombreEmpresa}
-                        type='text'
-                        autoComplete='off'
-                    />
+    const onSubmit = async e => {
+        e.preventDefault();
+        
+        // Ensure WebSocket connection is active
+        if (!connected) {
+            console.log('WebSocket not connected, attempting to reconnect...');
+            wsClient.reconnect();
+            // Wait for connection to establish
+            await new Promise(resolve => {
+                setTimeout(resolve, 1000);
+            });
+        }
+        
+        // Show loading dialog
+        SwalAlert.loading('Generando Certificados', 'Preparando proceso...');
+        
+        try {
+            if(datos.nombreEmpresa.length < 2){
+                await SwalAlert.validations.nombreEmpresa();
+                return;  
+            }
+            
+            const outputDir = await cargueMasivo(datos);
+            console.log('Proceso completado:', outputDir);
+            
+        } catch (error) {
+            console.error('Error en proceso de generación:', error);
+            await SwalAlert.error('Error', 'Error al generar los certificados');
+        }
+    }
+
+    return (
+        <div id='crear-certificado'>
+            <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png" alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px" id='logo-empresa'></img>
+            <form 
+                autoComplete='off'
+                onSubmit={onSubmit} 
+                id='form-certificado'>
+                <NavMenu actualPage={actualPage}/>
+                <div id='contenedor-titulo'>
+                    <h3><strong>Certificado Grupal</strong></h3>
+                    {!connected && <p style={{color: 'orange'}}>(Servidor desconectado)</p>}
                 </div>
-                
-                <div id='contenedor-form'>
-                    <label>
-                        Fecha Expedición:
-                    </label>
-                    <input 
-                        id='input-form' 
-                        name='fecha'
-                        value={datos.fecha}
-                        onChange={onChange}
-                        type='date' 
-                        autoComplete='off'
-                    />
+                <div id='form'>
+                    <div id='contenedor-form'>
+                        <label htmlFor="nombreEmpresa">
+                            Nombre Empresa:
+                        </label>
+                        <input
+                            id='input-form' 
+                            name='nombreEmpresa'
+                            onChange={onChange}
+                            value={datos.nombreEmpresa}
+                            type='text'
+                            autoComplete='off'
+                        />
+                    </div>
+
+                    <div id='contenedor-form'>
+                        <label htmlFor="fecha">
+                            Fecha Expedición:
+                        </label>
+                        <input
+                            id='input-form' 
+                            name='fecha'
+                            value={datos.fecha}
+                            onChange={onChange}
+                            type='date' 
+                            autoComplete='off'
+                        />
+                    </div>
                 </div>
-                </div>
-                <button id='boton-form' type='submit'>Certificar</button>
-                {/* // Añadir "PISTA" de archivo excel */}
-        </form>
-    </div> 
+                    <button id='boton-form' type='submit'>Certificar</button>
+            </form>
+        </div>
     );
 }
- 
+
 export default CargueMasivo;

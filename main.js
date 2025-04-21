@@ -125,43 +125,73 @@ async function createWindow() {
 
 // Agregar manejador de señales de terminación
 function handleAppTermination() {
-  return new Promise(async (resolve) => {
-    if (!isDev && server && server.closeAllServers) {
-      await server.closeAllServers();
-    }
-    
-    if (isDev) {
-      if (process.platform === 'win32') {
-        // Windows: usar TaskKill para terminar procesos
-        require('child_process').exec(
-          'FOR /F "tokens=5" %P IN (\'netstat -a -n -o ^| findstr :9001 :3002\') DO TaskKill /PID %P /F /T',
-          () => resolve()
-        );
+  return new Promise((resolve) => {
+    const finalize = () => {
+      // Handle dev environment process termination
+      if (isDev) {
+        if (process.platform === 'win32') {
+          // Windows: usar TaskKill para terminar procesos
+          require('child_process').exec(
+            'FOR /F "tokens=5" %P IN (\'netstat -a -n -o ^| findstr :9001 :3002\') DO TaskKill /PID %P /F /T',
+            () => resolve()
+          );
+        } else {
+          // Linux/Mac: usar lsof y kill
+          require('child_process').exec(
+            'lsof -i :9001,3002 -t | xargs kill -9 2>/dev/null || true',
+            () => resolve()
+          );
+        }
       } else {
-        // Linux/Mac: usar lsof y kill
-        require('child_process').exec(
-          'lsof -i :9001,3002 -t | xargs kill -9 2>/dev/null || true',
-          () => resolve()
-        );
+        resolve();
+      }
+    };
+    
+    // Handle production server cleanup
+    if (!isDev && server && server.closeAllServers) {
+      try {
+        // Call closeAllServers and handle both Promise and callback patterns
+        const result = server.closeAllServers();
+        if (result && typeof result.then === 'function') {
+          result.then(finalize).catch(err => {
+            console.error('Error closing servers:', err);
+            finalize();
+          });
+        } else {
+          finalize();
+        }
+      } catch (err) {
+        console.error('Error during server shutdown:', err);
+        finalize();
       }
     } else {
-      resolve();
+      finalize();
     }
   });
 }
 
-app.on("window-all-closed", async () => {
+app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
-    await handleAppTermination();
-    app.quit();
+    handleAppTermination().then(() => {
+      app.quit();
+    }).catch(err => {
+      console.error('Error during app termination:', err);
+      app.quit();
+    });
   }
 });
 
 // Agregar manejador para cierre forzado
-app.on("before-quit", async (event) => {
+app.on("before-quit", (event) => {
   event.preventDefault();
-  await handleAppTermination();
-  app.exit();
+  
+  // Use a Promise to handle the async operations
+  handleAppTermination().then(() => {
+    app.exit();
+  }).catch(err => {
+    console.error('Error during app termination:', err);
+    app.exit(1);
+  });
 });
 
 app.on("activate", () => {
@@ -171,6 +201,75 @@ app.on("activate", () => {
 });
 
 app.on("ready", createWindow);
+
+// WebSocket connection tracking across renderer processes
+const wsConnections = new Map(); // Track WebSocket connections by window ID
+
+// Handle WebSocket initialization from renderer process
+ipcMain.on('ws-initialized', (event, data) => {
+  const { windowId, timestamp } = data;
+  const webContentsId = event.sender.id;
+  
+  // Store connection info
+  wsConnections.set(windowId, {
+    webContentsId,
+    timestamp,
+    isActive: true
+  });
+  
+  console.log(`WebSocket initialized in renderer process (window: ${windowId}, webContents: ${webContentsId})`);
+  
+  // If this isn't the first connection, notify the renderer to make it passive
+  const connections = Array.from(wsConnections.values());
+  if (connections.length > 1) {
+    // Sort by timestamp (oldest first) to find primary connection
+    connections.sort((a, b) => a.timestamp - b.timestamp);
+    const primaryConnection = connections[0];
+    
+    // If this is not the primary connection, tell it to close
+    if (primaryConnection.webContentsId !== webContentsId) {
+      event.reply('ws-make-passive', { 
+        reason: 'not-primary',
+        primaryWindowId: Array.from(wsConnections.entries())
+          .find(([_, info]) => info.webContentsId === primaryConnection.webContentsId)?.[0]
+      });
+    }
+  }
+});
+
+// Handle WebSocket disconnection notification
+ipcMain.on('ws-disconnected', (event, data) => {
+  const { windowId } = data;
+  if (wsConnections.has(windowId)) {
+    console.log(`WebSocket disconnected in renderer process (window: ${windowId})`);
+    wsConnections.delete(windowId);
+    
+    // If there are other connections, activate the oldest one
+    if (wsConnections.size > 0) {
+      const connections = Array.from(wsConnections.entries());
+      connections.sort(([_, a], [__, b]) => a.timestamp - b.timestamp);
+      const [oldestWindowId, oldestConnection] = connections[0];
+      
+      // Find the webContents for the oldest connection
+      const allWebContents = BrowserWindow.getAllWindows()
+        .map(win => win.webContents)
+        .filter(contents => contents.id === oldestConnection.webContentsId);
+      
+      if (allWebContents.length > 0) {
+        console.log(`Activating WebSocket in renderer process (window: ${oldestWindowId})`);
+        allWebContents[0].send('ws-activate');
+      }
+    }
+  }
+});
+
+// Handle WebSocket reconnection request from a renderer process
+ipcMain.on('ws-reconnect-request', (event, data) => {
+  // Broadcast reconnect command to all renderer processes
+  BrowserWindow.getAllWindows().forEach(win => {
+    win.webContents.send('ws-reconnect');
+  });
+});
 
 // Agregar manejadores de IPC
 ipcMain.on('startServer', (event) => {
@@ -192,7 +291,7 @@ ipcMain.on('startServer', (event) => {
 });
 
 // Modificar el manejador de IPC para mejor manejo multiplataforma
-ipcMain.on('start-server', async (event) => {
+ipcMain.on('start-server', (event) => {
   if (isDev && !serverProcess) {
     const { spawn } = require('child_process');
     const command = process.platform === 'win32' ? 'yarn.cmd' : 'yarn';

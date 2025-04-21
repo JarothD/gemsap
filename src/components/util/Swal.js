@@ -7,10 +7,22 @@ export const SwalAlert = {
             html: message,
             allowEscapeKey: false,
             allowOutsideClick: false,
+            showConfirmButton: false,
+            allowEnterKey: false,
             didOpen: () => {
                 Swal.showLoading()
             }
         });
+    },
+
+    updateLoading: (message) => {
+        if (Swal.isVisible()) {
+            console.log('Updating Swal with message:', message);
+            Swal.update({
+                html: message,
+                showConfirmButton: false
+            });
+        }
     },
 
     success: (title = 'Éxito', message = 'Operación completada') => {
@@ -33,14 +45,23 @@ export const SwalAlert = {
     },
 
     progress: (title = 'Generando Certificados', messageData) => {
+        // Handle both string and object message formats
+        let message = '';
+        let counter = '';
+        
+        if (typeof messageData === 'string') {
+            message = messageData;
+        } else if (messageData && typeof messageData === 'object') {
+            message = messageData.message || 'Procesando...';
+            counter = messageData.counter || '';
+        }
+        
         return Swal.fire({
             title,
             html: `
                 <div class="progress-info">
-                    <p>${messageData.message}</p>
-                    ${messageData.counter ? 
-                        `<p class="counter">${messageData.counter}</p>` 
-                        : ''}
+                    <p>${message}</p>
+                    ${counter ? `<p class="counter">${counter}</p>` : ''}
                 </div>
             `,
             allowEscapeKey: false,
@@ -108,5 +129,17 @@ export const SwalAlert = {
         }
     }
 };
+
+// Initialize WebSocket listener after export to avoid circular dependency
+setTimeout(() => {
+    // Dynamically import to avoid circular dependency
+    import('./utils/wsListeners').then(module => {
+        const setupGlobalSwalUpdater = module.default;
+        setupGlobalSwalUpdater();
+        console.log('WebSocket listener for Swal initialized');
+    }).catch(err => {
+        console.error('Error initializing WebSocket listener:', err);
+    });
+}, 1000);
 
 export default SwalAlert;
