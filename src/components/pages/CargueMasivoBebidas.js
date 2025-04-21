@@ -13,21 +13,33 @@ const CargueMasivoBebidas = () => {
     useEffect(() => {
         const handleMessage = (data) => {
             try {
-                // Intentar parsear el mensaje como JSON
-                const messageData = JSON.parse(data);
-                if (messageData.type === 'progress') {
+                // Si el dato recibido es un string, intentar parsearlo como JSON
+                let messageData = data;
+                if (typeof data === 'string') {
+                    try {
+                        messageData = JSON.parse(data);
+                    } catch (e) {
+                        // Si no es un JSON válido, dejarlo como string
+                        messageData = data;
+                    }
+                }
+
+                // Manejar diferentes tipos de mensajes
+                if (typeof messageData === 'object' && messageData.type === 'progress') {
                     setCargando(messageData.message);
                     SwalAlert.progress('Generando Certificados', messageData);
                 }
-            } catch (e) {
-                // Si no es JSON, manejar como antes
-                if(data === 'Ready') {
+                else if (messageData === 'Ready' || (messageData.type === 'status' && messageData.status === 'ready')) {
                     setCargando('Proceso completado');
-                    Swal.close();
-                } else if(data === 'Error') {
+                    // Mostrar mensaje de éxito con botón de confirmación
+                    SwalAlert.success('¡Proceso completado!', 'La operación ha finalizado con éxito');
+                } 
+                else if (messageData === 'Error' || (messageData.type === 'error')) {
                     SwalAlert.validations.archivos();
                     wss.send('Ready');
                 }
+            } catch (e) {
+                console.error('Error procesando mensaje WebSocket:', e);
             }
         };
 
@@ -88,7 +100,7 @@ const CargueMasivoBebidas = () => {
                     </div>
                     <div id='form'>
                 <div id='contenedor-form'>
-                    <label>
+                    <label htmlFor="nombreEmpresa">
                         Nombre Empresa:
                     </label>
                     <input 
@@ -101,7 +113,7 @@ const CargueMasivoBebidas = () => {
                     />
                 </div>
                 <div id='contenedor-form'>
-                    <label>
+                    <label htmlFor="fecha">
                         Fecha Expedición:
                     </label>
                     <input 

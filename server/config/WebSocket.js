@@ -395,7 +395,8 @@ const WebSocketManager = {
         this.send({ 
             type: 'connected', 
             id: socketId, 
-            message: 'Successfully connected to WebSocket server',
+            // No enviar mensaje para evitar notificación al usuario
+            silent: true,
             time: Date.now()
         }, socketId);
         

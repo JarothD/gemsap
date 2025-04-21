@@ -264,10 +264,20 @@ class WebSocketClient {
             if (data && data.type === 'connected') {
                 this.connectionId = data.id;
                 log(`Connection established with ID: ${this.connectionId}`, LOG_LEVELS.INFO);
+                
+                // No procesar este mensaje más adelante si es silencioso
+                if (data.silent) {
+                    return;
+                }
             }
             
             // Only log important messages
-            const isSystemMessage = data && (data.type === 'heartbeat' || data.type === 'pong' || data.type === 'ping');
+            const isSystemMessage = data && (
+                data.type === 'heartbeat' || 
+                data.type === 'pong' || 
+                data.type === 'ping' || 
+                (data.type === 'connected' && data.silent) // Ignorar mensajes de conexión silenciosos
+            );
             
             if (!isSystemMessage) {
                 log('WebSocket message received: ' + (typeof data === 'object' ? formatLog(data) : data), LOG_LEVELS.INFO);

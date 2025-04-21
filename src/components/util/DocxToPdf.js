@@ -175,17 +175,7 @@ export async function cargueMasivoBebidas(data){
         const respuesta = await clienteAxios.post('/masivobebidas', {
             nombreEmpresa: nombreEmpresa.toUpperCase(),
             fecha
-        })
-        Swal.fire({
-            icon:'success',
-            title:'Éxito',
-            text: respuesta.data.msg,
-            didOpen: () => {
-                Swal.hideLoading()
-              }
-        })
-
-        
+        });
         
     } catch (error) {
         if(error.name == 'AxiosError'){
@@ -195,7 +185,7 @@ export async function cargueMasivoBebidas(data){
                 text: 'LibreOffice no esta Instalado'
             })            
         }
-        if(error.response.data.msg){
+        if(error.response && error.response.data && error.response.data.msg){
             Swal.fire({
                 icon:'error',
                 title:'Ooops..',
