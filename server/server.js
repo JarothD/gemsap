@@ -17,6 +17,12 @@ const HTTP = http.Server(Api);
 
 Api.use(cors());
 Api.use(express.json({ extended: true }));
+
+// Endpoint de salud para que Electron pueda verificar que el servidor está listo
+Api.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: Date.now() });
+});
+
 Api.use('/', routes);
 
 // Manejo de excepciones no controladas

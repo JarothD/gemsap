@@ -80,11 +80,13 @@
     "react-build": "react-scripts build",
     "server-build": "babel server --out-dir build-server",
     "server-start": "nodemon --watch server --exec babel-node server/server.js",
-    "electron-dev": "node scripts/dev.js scripts/start.js",
+    "dev": "yarn clean && concurrently \"react-scripts start\" \"electron .\"",
     "electron-pack": "yarn electron-builder -c.extraMetadata.main='./main.js'",
     "preelectron-pack": "yarn react-build && yarn server-build",
+    "build": "yarn preelectron-pack && yarn electron-pack",
     "clean": "node scripts/clean-ports.js",
-    "start": "yarn clean && concurrently \"react-devtools\" \"node scripts/dev-server.js\""
+    "start": "yarn dev",
+    "prod": "electron ."
   },
   "browserslist": {
     "production": [

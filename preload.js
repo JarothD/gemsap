@@ -1,56 +1,95 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-// Remover el evento DOMContentLoaded que usa child_process
+// API para la comunicación con el proceso principal
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Servidor
   startServer: () => ipcRenderer.send('start-server'),
   onServerStatus: (callback) => {
-    ipcRenderer.on('server-status', (event, ...args) => callback(...args));
+    const subscription = (event, ...args) => callback(...args);
+    ipcRenderer.on('server-status', subscription);
+    return () => ipcRenderer.removeListener('server-status', subscription);
   },
+  
+  // Información del sistema
   getVersion: () => process.versions.electron,
   platform: process.platform
 });
 
-// Enhanced WebSocket IPC communication
+// API mejorada para gestión de WebSockets
 contextBridge.exposeInMainWorld('wsIPC', {
-  // Send messages to main process
+  // Enviar mensajes al proceso principal
   initialized: (data) => ipcRenderer.send('ws-initialized', data),
   disconnected: (data) => ipcRenderer.send('ws-disconnected', data),
   reconnectRequest: (data) => ipcRenderer.send('ws-reconnect-request', data),
   
-  // Receive messages from main process
+  // Recibir mensajes del proceso principal
   onMakePassive: (callback) => {
-    ipcRenderer.on('ws-make-passive', (event, data) => callback(data));
-    return () => ipcRenderer.removeListener('ws-make-passive', callback);
+    const subscription = (event, data) => callback(data);
+    ipcRenderer.on('ws-make-passive', subscription);
+    return () => ipcRenderer.removeListener('ws-make-passive', subscription);
   },
   onActivate: (callback) => {
-    ipcRenderer.on('ws-activate', (event, data) => callback(data));
-    return () => ipcRenderer.removeListener('ws-activate', callback);
+    const subscription = (event, data) => callback(data);
+    ipcRenderer.on('ws-activate', subscription);
+    return () => ipcRenderer.removeListener('ws-activate', subscription);
   },
   onReconnect: (callback) => {
-    ipcRenderer.on('ws-reconnect', (event, data) => callback(data));
-    return () => ipcRenderer.removeListener('ws-reconnect', callback);
+    const subscription = (event, data) => callback(data);
+    ipcRenderer.on('ws-reconnect', subscription);
+    return () => ipcRenderer.removeListener('ws-reconnect', subscription);
   },
   onDisconnect: (callback) => {
-    ipcRenderer.on('ws-disconnect', (event, data) => callback(data));
-    return () => ipcRenderer.removeListener('ws-disconnect', callback);
+    const subscription = (event, data) => callback(data);
+    ipcRenderer.on('ws-disconnect', subscription);
+    return () => ipcRenderer.removeListener('ws-disconnect', subscription);
   }
 });
 
-// Legacy WebSocket API (maintained for backward compatibility)
+// API simplificada para compatibilidad con código anterior
 contextBridge.exposeInMainWorld('wss', {
+  // Enviar un mensaje al WebSocket
   send: (message) => {
     if (window.WebSocket) {
-      const ws = new WebSocket('ws://localhost:3002');
-      ws.onopen = () => ws.send(message);
-      return ws;
+      try {
+        // Utilizar la instancia de WebSocket centralizada si está disponible
+        if (window.ElectronWSInstance && 
+            window.ElectronWSInstance.send && 
+            window.ElectronWSInstance.isConnected()) {
+          window.ElectronWSInstance.send(message);
+          return true;
+        }
+        
+        // Fallback a crear un nuevo WebSocket
+        const ws = new WebSocket('ws://localhost:3002');
+        ws.onopen = () => {
+          ws.send(message);
+        };
+        return ws;
+      } catch (err) {
+        console.error('Error sending WebSocket message:', err);
+        return null;
+      }
     }
     return null;
   },
+  
+  // Escuchar mensajes del WebSocket (para compatibilidad)
   onMessage: (callback) => {
     if (window.WebSocket) {
-      const ws = new WebSocket('ws://localhost:3002');
-      ws.onmessage = callback;
-      return ws;
+      try {
+        // Utilizar la instancia centralizada si está disponible
+        if (window.ElectronWSInstance && window.ElectronWSInstance.addMessageHandler) {
+          return window.ElectronWSInstance.addMessageHandler(callback);
+        }
+        
+        // Fallback a crear un nuevo WebSocket
+        const ws = new WebSocket('ws://localhost:3002');
+        ws.onmessage = callback;
+        return ws;
+      } catch (err) {
+        console.error('Error setting up WebSocket listener:', err);
+        return null;
+      }
     }
     return null;
   }

@@ -45,7 +45,7 @@ class WebSocketClient {
     constructor() {
         // Check for existing instance
         if (typeof window !== 'undefined' && window.ElectronWSInstance) {
-            console.log('Using existing WebSocket instance');
+            log('Using existing WebSocket instance', LOG_LEVELS.DEBUG);
             return window.ElectronWSInstance;
         }
         
@@ -81,7 +81,24 @@ class WebSocketClient {
         }
         
         // Initial connection (delayed to prevent race conditions)
-        setTimeout(() => this.connect(), 1000);
+        // Check if server status is available from Electron
+        if (typeof window !== 'undefined' && window.electronAPI) {
+            let connectionAttempted = false;
+            
+            window.electronAPI.onServerStatus((status) => {
+                if (status && status.running && !connectionAttempted) {
+                    log('Server reported as running, connecting to WebSocket', LOG_LEVELS.INFO);
+                    connectionAttempted = true;
+                    setTimeout(() => this.connect(), 500);
+                }
+            });
+            
+            // Request server status (only once)
+            window.electronAPI.startServer();
+        } else {
+            // Fallback to regular delayed connection
+            setTimeout(() => this.connect(), 1000);
+        }
     }
     
     // Private method to generate a unique window identifier
@@ -92,35 +109,36 @@ class WebSocketClient {
     // Private method to set up IPC communication with main process
     _setupIPC() {
         if (wsIPC) {
-            // Register event handlers for IPC communication
+            log('Setting up IPC communication with main process', LOG_LEVELS.DEBUG);
             
-            // Handle reconnection request from main process
+            // Register event handlers for IPC communication
             this._cleanupHandlers = [];
             
-            const reconnectHandler = () => {
-                console.log('Received reconnect command from main process');
+            // Handle reconnection request from main process
+            const reconnectHandler = (data) => {
+                log(`Received reconnect command from main process: ${formatLog(data)}`, LOG_LEVELS.INFO);
                 this.reconnect();
             };
             this._cleanupHandlers.push(wsIPC.onReconnect(reconnectHandler));
             
             // Handle forced disconnect from main process
-            const disconnectHandler = () => {
-                console.log('Received disconnect command from main process');
+            const disconnectHandler = (data) => {
+                log(`Received disconnect command from main process: ${formatLog(data)}`, LOG_LEVELS.INFO);
                 this.close();
             };
             this._cleanupHandlers.push(wsIPC.onDisconnect(disconnectHandler));
             
             // Handle passive mode instruction from main process
             const passiveHandler = (data) => {
-                console.log('Received instruction to make WebSocket passive:', data);
+                log(`Received instruction to make WebSocket passive: ${formatLog(data)}`, LOG_LEVELS.INFO);
                 this.isPassive = true;
                 this.close();
             };
             this._cleanupHandlers.push(wsIPC.onMakePassive(passiveHandler));
             
             // Handle activation instruction from main process
-            const activateHandler = () => {
-                console.log('Received instruction to activate WebSocket');
+            const activateHandler = (data) => {
+                log(`Received instruction to activate WebSocket: ${formatLog(data)}`, LOG_LEVELS.INFO);
                 this.isPassive = false;
                 this.reconnect();
             };
@@ -132,9 +150,12 @@ class WebSocketClient {
                     windowId: this.windowID,
                     timestamp: Date.now()
                 });
+                log(`Notified main process of WebSocket initialization with window ID: ${this.windowID}`, LOG_LEVELS.DEBUG);
             } catch (e) {
                 console.warn('Could not send initialization message to main process:', e);
             }
+        } else {
+            log('IPC communication not available, running in standalone mode', LOG_LEVELS.INFO);
         }
     }
     
@@ -149,7 +170,7 @@ class WebSocketClient {
         this.isReconnecting = true;
         
         try {
-            console.log('Connecting to WebSocket:', 'ws://localhost:3002');
+            log('Connecting to WebSocket: ws://localhost:3002', LOG_LEVELS.INFO);
             
             // Create new WebSocket connection with window ID
             this.ws = new WebSocket(`ws://localhost:3002?windowId=${this.windowID}`);
@@ -163,19 +184,19 @@ class WebSocketClient {
             // Set connection timeout
             this.connectionTimeout = setTimeout(() => {
                 if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
-                    console.warn('WebSocket connection timeout after 10 seconds');
+                    log('WebSocket connection timeout after 10 seconds', LOG_LEVELS.ERROR);
                     this.ws.close();
                 }
             }, 10000);
         } catch (error) {
-            console.error('Error creating WebSocket connection:', error);
+            log(`Error creating WebSocket connection: ${error}`, LOG_LEVELS.ERROR);
             this._scheduleReconnect();
         }
     }
     
     // Handle successful connection
     _handleOpen() {
-        console.log('WebSocket connection established');
+        log('WebSocket connection established', LOG_LEVELS.INFO);
         this.connected = true;
         this.isReconnecting = false;
         this.reconnectAttempts = 0;
@@ -194,7 +215,7 @@ class WebSocketClient {
         
         // Send any pending messages
         if (this.pendingMessages.length > 0) {
-            console.log(`Sending ${this.pendingMessages.length} pending messages`);
+            log(`Sending ${this.pendingMessages.length} pending messages`, LOG_LEVELS.INFO);
             const messages = [...this.pendingMessages];
             this.pendingMessages = [];
             
@@ -206,6 +227,19 @@ class WebSocketClient {
         
         // Start heartbeat to keep connection alive
         this._startHeartbeat();
+        
+        // Notify main process of successful connection
+        if (wsIPC) {
+            try {
+                wsIPC.initialized({
+                    windowId: this.windowID,
+                    timestamp: Date.now(),
+                    connected: true
+                });
+            } catch (e) {
+                log(`Error notifying main process of connection: ${e}`, LOG_LEVELS.ERROR);
+            }
+        }
     }
     
     // Handle connection close
@@ -221,7 +255,7 @@ class WebSocketClient {
             this.connectionTimeout = null;
         }
         
-        console.log(`WebSocket connection closed: ${event.code} - ${event.reason || 'No reason'}`);
+        log(`WebSocket connection closed: ${event.code} - ${event.reason || 'No reason'}`, LOG_LEVELS.INFO);
         
         // Notify main process of disconnection
         if (wsIPC && !this.destroyed) {
@@ -231,7 +265,7 @@ class WebSocketClient {
                     timestamp: Date.now()
                 });
             } catch (e) {
-                console.warn('Could not send disconnection message to main process:', e);
+                log(`Could not send disconnection message to main process: ${e}`, LOG_LEVELS.ERROR);
             }
         }
         
@@ -243,7 +277,7 @@ class WebSocketClient {
     
     // Handle connection error
     _handleError(error) {
-        console.error('WebSocket error:', error);
+        log(`WebSocket error: ${error}`, LOG_LEVELS.ERROR);
         // No need to do anything here - onclose will be called after an error
     }
     
@@ -290,11 +324,11 @@ class WebSocketClient {
                 try {
                     handler(data);
                 } catch (error) {
-                    console.error('Error in message handler:', error);
+                    log(`Error in message handler: ${error}`, LOG_LEVELS.ERROR);
                 }
             });
         } catch (error) {
-            console.error('Error processing WebSocket message:', error);
+            log(`Error processing WebSocket message: ${error}`, LOG_LEVELS.ERROR);
         }
     }
     
@@ -312,20 +346,20 @@ class WebSocketClient {
             // Exponential backoff with minimum delay of 3 seconds
             const delay = Math.min(3000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
             
-            console.log(`Scheduling reconnection attempt ${this.reconnectAttempts} of ${this.maxReconnectAttempts} in ${Math.floor(delay/1000)}s`);
+            log(`Scheduling reconnection attempt ${this.reconnectAttempts} of ${this.maxReconnectAttempts} in ${Math.floor(delay/1000)}s`, LOG_LEVELS.INFO);
             
             this.reconnectionTimer = setTimeout(() => {
                 this.reconnectionTimer = null;
                 this.connect();
             }, delay);
         } else {
-            console.error('Maximum reconnection attempts reached');
+            log('Maximum reconnection attempts reached', LOG_LEVELS.ERROR);
             this.isReconnecting = false;
             
             // Reset reconnect attempts after a longer cooling period
             setTimeout(() => {
                 if (!this.destroyed) {
-                    console.log('Resetting reconnection attempts after cooling period');
+                    log('Resetting reconnection attempts after cooling period', LOG_LEVELS.INFO);
                     this.reconnectAttempts = 0;
                     this.connect();
                 }
@@ -382,7 +416,7 @@ class WebSocketClient {
                     try {
                         cleanup();
                     } catch (e) {
-                        console.warn('Error cleaning up IPC handler:', e);
+                        log(`Error cleaning up IPC handler: ${e}`, LOG_LEVELS.ERROR);
                     }
                 }
             });
@@ -394,12 +428,12 @@ class WebSocketClient {
                 this.ws.onclose = null; // Remove close handler to prevent reconnection
                 this.ws.close();
             } catch (e) {
-                console.warn('Error closing WebSocket during cleanup:', e);
+                log(`Error closing WebSocket during cleanup: ${e}`, LOG_LEVELS.ERROR);
             }
             this.ws = null;
         }
         
-        console.log('WebSocket resources cleaned up before unload');
+        log('WebSocket resources cleaned up before unload', LOG_LEVELS.INFO);
     }
     
     // Public method to send message
@@ -451,14 +485,14 @@ class WebSocketClient {
             this.ws.send(message);
             return true;
         } catch (error) {
-            console.error('Error sending WebSocket message:', error);
+            log(`Error sending WebSocket message: ${error}`, LOG_LEVELS.ERROR);
             return false;
         }
     }
     
     // Public method to manually reconnect
     reconnect() {
-        console.log('Manual reconnection requested');
+        log('Manual reconnection requested', LOG_LEVELS.INFO);
         
         // Reset reconnection state
         this.reconnectAttempts = 0;
@@ -477,7 +511,7 @@ class WebSocketClient {
                 this.ws.onclose = null; // Remove close handler to prevent reconnection loop
                 this.ws.close();
             } catch (e) {
-                console.warn('Error closing WebSocket during reconnect:', e);
+                log(`Error closing WebSocket during reconnect: ${e}`, LOG_LEVELS.ERROR);
             }
             this.ws = null;
         }
@@ -493,14 +527,14 @@ class WebSocketClient {
                     timestamp: Date.now()
                 });
             } catch (e) {
-                console.warn('Could not send reconnect request to main process:', e);
+                log(`Could not send reconnect request to main process: ${e}`, LOG_LEVELS.ERROR);
             }
         }
     }
     
     // Public method to close connection
     close() {
-        console.log('Manually closing WebSocket connection');
+        log('Manually closing WebSocket connection', LOG_LEVELS.INFO);
         
         // Clear all timers
         this._stopHeartbeat();
@@ -521,7 +555,7 @@ class WebSocketClient {
                 this.ws.onclose = null; // Remove close handler to prevent reconnection
                 this.ws.close();
             } catch (e) {
-                console.warn('Error closing WebSocket:', e);
+                log(`Error closing WebSocket: ${e}`, LOG_LEVELS.ERROR);
             }
             this.ws = null;
         }
@@ -536,7 +570,7 @@ class WebSocketClient {
                     timestamp: Date.now()
                 });
             } catch (e) {
-                console.warn('Could not send disconnection message to main process:', e);
+                log(`Could not send disconnection message to main process: ${e}`, LOG_LEVELS.ERROR);
             }
         }
     }
