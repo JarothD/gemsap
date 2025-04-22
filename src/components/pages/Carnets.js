@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import Swal from 'sweetalert2'
 
-import { cargueCarnets, cargueMasivo } from '../util/DocxToPdf';
+import { cargueCarnets } from '../util/DocxToPdf';
 import wss from '../../config/wss'
 import NavMenu from '../util/NavMenu';
 
@@ -10,8 +10,7 @@ const Carnets = () => {
     const actualPage = 'Carnets'
     
     wss.onmessage = (event) => {
-        //console.log(event.data)
-        
+
         if(event.data === 'Ready'){
             setCargando('Cargando...')
         } 

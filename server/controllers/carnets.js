@@ -22,8 +22,10 @@ const QRTemplate = (nombreCompleto, documento, fechaFin) => {
 const generarCarnets = async (req, res) => {
     try {
         const { nombreEmpresa } = req.body;
+        const startTime = Date.now();
         const { pathFirmaGemsap, firmaSeleccionada, firmas } = getSettings();
         const firmaData = firmas.find(fir => fir.firma === firmaSeleccionada);
+        const outputDir = path.join(cardsPath, nombreEmpresa);
 
         // Inicializar el handler con HeaderExtension
         const headerExtension = new HeaderExtension();
@@ -84,15 +86,19 @@ const generarCarnets = async (req, res) => {
             fs.writeFileSync(pdfFilePath, pdfBuf);
 
             // Procesar imágenes
-            const outputDir = path.join(cardsPath, "images");
+            //const outputDir = path.join(cardsPath, "images");
             await processPdfWithImages(pdfFilePath, outputDir);
 
             contador += paquetes[index].length;
             WebSocketManager.send(contador + ' de ' + dataClient.length);
         }
 
+        const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
         WebSocketManager.send('Ready');
-        res.json({ msg: 'Certificados generados con éxito' });
+        res.json({ 
+            msg: `${dataClient.length} Certificados generados con éxito en ${totalTime} segundos`,
+            outputDir
+        });
     } catch (error) {
         console.error(error);
         WebSocketManager.send('Error');

@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
-import User from '../../assets/user.svg'
-import UserGroup from '../../assets/usergroup.svg'
-import Module from '../../assets/module.svg'
 import { cambiarPerfil, obtenerPerfiles } from '../util/Signature';
 import NavMenu from '../util/NavMenu';
 
@@ -47,7 +43,7 @@ const PerfilFirma = () => {
         <form id='form-certificado' onSubmit={onSubmit}>
             {<NavMenu actualPage={actualPage} />}
             <div id='contenedor-titulo'>
-                <h3 style={{textAlign: 'center'}}><strong>Cambiar Perfíl Firma</strong></h3>
+                <h3><strong>Cambiar Firma</strong></h3>
             </div>
             <div id='form'>
             <div id='contenedor-form'>

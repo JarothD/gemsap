@@ -69,10 +69,7 @@ export async function generarCarnets(data){
         Swal.fire({
             icon:'success',
             title:'Éxito',
-            text: respuesta.data.msg,
-            didOpen: () => {
-                Swal.hideLoading()
-              }
+            text: respuesta.data.msg
         })
 
         
@@ -105,10 +102,7 @@ export async function cargueMasivo(data){
         Swal.fire({
             icon:'success',
             title:'Éxito',
-            text: respuesta.data.msg,
-            didOpen: () => {
-                Swal.hideLoading()
-              }
+            text: respuesta.data.msg
         })
         return respuesta.data.outputDir
 
@@ -139,14 +133,16 @@ export async function cargueCarnets(data){
             nombreEmpresa: nombreEmpresa.toUpperCase()
             
         })
-        Swal.fire({
-            icon:'success',
-            title:'Éxito',
-            text: respuesta.data.msg,
-            didOpen: () => {
-                Swal.hideLoading()
-              }
-        })
+        
+        // Close any open SweetAlert and show success message with OK button
+        Swal.close();
+        setTimeout(() => {
+            Swal.fire({
+                icon:'success',
+                title:'Éxito',
+                text: respuesta.data.msg
+            });
+        }, 100);
 
         
         
@@ -177,6 +173,12 @@ export async function cargueMasivoBebidas(data){
             fecha
         });
         
+        Swal.fire({
+            icon:'success',
+            title:'Éxito',
+            text: respuesta.data.msg
+        })
+        
     } catch (error) {
         if(error.name == 'AxiosError'){
             Swal.fire({
@@ -206,14 +208,16 @@ export async function cargueModular(data) {
             fecha
 
         })
-        Swal.fire({
-            icon:'success',
-            title:'Éxito',
-            text: respuesta.data.msg,
-            didOpen: () => {
-                Swal.hideLoading()
-              }
-        })
+        
+        // Close any open SweetAlert and show success message with OK button
+        Swal.close();
+        setTimeout(() => {
+            Swal.fire({
+                icon:'success',
+                title:'Éxito',
+                text: respuesta.data.msg
+            });
+        }, 100);
     } catch (error) {
         if(error.name == 'AxiosError'){
             Swal.fire({
