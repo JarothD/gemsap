@@ -1,11 +1,7 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom';
 import Swal from 'sweetalert2'
 
-import User from '../../assets/user.svg'
-import UserGroup from '../../assets/usergroup.svg'
 import wss from '../../config/wss'
-import Signature from '../../assets/signature.svg'
 import { cargueModular } from '../util/DocxToPdf';
 import NavMenu from '../util/NavMenu';
 
