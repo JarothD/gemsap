@@ -12,7 +12,43 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Información del sistema
   getVersion: () => process.versions.electron,
-  platform: process.platform
+  platform: process.platform,
+  
+  // Añadir función para abrir directorios con mejor manejo de errores
+  openDirectory: (dirPath) => {
+    console.log(`[Preload] Attempting to open directory: ${dirPath}`);
+    
+    try {
+      ipcRenderer.send('open-directory', dirPath);
+      
+      // Setup a one-time listener for the response
+      return new Promise((resolve, reject) => {
+        const handler = (event, result) => {
+          // Remove listener after it's called once
+          ipcRenderer.removeListener('open-directory-result', handler);
+          
+          if (result.success) {
+            console.log(`[Preload] Directory opened successfully`);
+            resolve(true);
+          } else {
+            console.error(`[Preload] Failed to open directory: ${result.error}`);
+            reject(new Error(result.error));
+          }
+        };
+        
+        ipcRenderer.on('open-directory-result', handler);
+        
+        // Set a timeout in case we never get a response
+        setTimeout(() => {
+          ipcRenderer.removeListener('open-directory-result', handler);
+          reject(new Error('Timeout waiting for directory to open'));
+        }, 5000);
+      });
+    } catch (err) {
+      console.error(`[Preload] Error in openDirectory: ${err.message}`);
+      return Promise.reject(err);
+    }
+  }
 });
 
 // API mejorada para gestión de WebSockets

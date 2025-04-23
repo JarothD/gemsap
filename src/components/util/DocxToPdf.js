@@ -2,6 +2,46 @@ import Swal from 'sweetalert2'
 
 import { clienteAxios } from "../../config/axios";
 
+// Función modularizada para abrir directorios
+export function abrirDirectorio(outputDir) {
+    if (!outputDir) {
+        console.warn('No se recibió ruta de directorio para abrir');
+        return false;
+    }
+    
+    console.log("Verificando disponibilidad para abrir directorio...");
+    console.log("Output directory:", outputDir);
+    
+    if (typeof window === 'undefined') {
+        console.warn('Ventana no disponible para abrir directorio');
+        return false;
+    }
+    
+    console.log("ElectronAPI disponible:", !!window.electronAPI);
+    console.log("OpenDirectory disponible:", typeof window.electronAPI?.openDirectory === 'function');
+    
+    if (!window.electronAPI || typeof window.electronAPI.openDirectory !== 'function') {
+        console.warn('No se pudo abrir el directorio: API de Electron no disponible correctamente');
+        return false;
+    }
+    
+    try {
+        console.log("Intentando abrir directorio:", outputDir);
+        return window.electronAPI.openDirectory(outputDir)
+            .then(() => {
+                console.log("Directorio abierto con éxito");
+                return true;
+            })
+            .catch(err => {
+                console.error("Error al abrir directorio:", err);
+                return false;
+            });
+    } catch (error) {
+        console.error("Error al intentar abrir directorio:", error);
+        return false;
+    }
+}
+
 export async function llenarDocx(data, type){            
     try {        
         const {nombres, apellidos, cc, fecha} = data
@@ -99,14 +139,18 @@ export async function cargueMasivo(data){
             nombreEmpresa: nombreEmpresa.toUpperCase(),
             fecha
         })
+        
         Swal.fire({
             icon:'success',
             title:'Éxito',
-            text: respuesta.data.msg
-        })
-        return respuesta.data.outputDir
-
-        
+            text: respuesta.data.msg,
+            confirmButtonText: 'OK'
+        }).then(() => {
+            // Usar la función modularizada para abrir el directorio
+            if (respuesta.data.outputDir) {
+                abrirDirectorio(respuesta.data.outputDir);
+            }
+        });
         
     } catch (error) {
         if(error.name == 'AxiosError'){
@@ -140,7 +184,13 @@ export async function cargueCarnets(data){
             Swal.fire({
                 icon:'success',
                 title:'Éxito',
-                text: respuesta.data.msg
+                text: respuesta.data.msg,
+                confirmButtonText: 'OK'
+            }).then(() => {
+                // Usar la función modularizada para abrir el directorio
+                if (respuesta.data.outputDir) {
+                    abrirDirectorio(respuesta.data.outputDir);
+                }
             });
         }, 100);
 
@@ -176,8 +226,14 @@ export async function cargueMasivoBebidas(data){
         Swal.fire({
             icon:'success',
             title:'Éxito',
-            text: respuesta.data.msg
-        })
+            text: respuesta.data.msg,
+            confirmButtonText: 'OK'
+        }).then(() => {
+            // Usar la función modularizada para abrir el directorio
+            if (respuesta.data.outputDir) {
+                abrirDirectorio(respuesta.data.outputDir);
+            }
+        });
         
     } catch (error) {
         if(error.name == 'AxiosError'){
@@ -215,7 +271,13 @@ export async function cargueModular(data) {
             Swal.fire({
                 icon:'success',
                 title:'Éxito',
-                text: respuesta.data.msg
+                text: respuesta.data.msg,
+                confirmButtonText: 'OK'
+            }).then(() => {
+                // Usar la función modularizada para abrir el directorio
+                if (respuesta.data.outputDir) {
+                    abrirDirectorio(respuesta.data.outputDir);
+                }
             });
         }, 100);
     } catch (error) {

@@ -121,7 +121,10 @@ const certificarModulo = async (req, res) => {
         const totalTime = ((endTime - startTime) / 1000).toFixed(2);
 
         WebSocketManager.send('Ready');
-        res.json({ msg: `Modulos generados con éxito en ${totalTime} segundos.` });
+        res.json({ 
+            msg: `Modulos generados con éxito en ${totalTime} segundos.`,
+            outputDir: path.join(resultModulePath, nombreEmpresa)
+        });
 
     } catch (error) {
         console.error(error);

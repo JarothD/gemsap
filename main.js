@@ -2,7 +2,7 @@ const url = require('url');
 const path = require("path");
 const http = require('http');
 const { spawn } = require('child_process');
-const { app, BrowserWindow, session, ipcMain, screen } = require("electron");
+const { app, BrowserWindow, session, ipcMain, screen, shell } = require("electron");
 const isDev = require("electron-is-dev");
 
 let mainWindow;
@@ -486,5 +486,29 @@ ipcMain.on('start-server', (event) => {
 app.on('browser-window-closed', (_, window) => {
   if (window && window.webContents) {
     windowsNotifiedOfServerStatus.delete(window.webContents.id);
+  }
+});
+
+// Add IPC handler for opening directory
+ipcMain.on('open-directory', (event, dirPath) => {
+  console.log(`[Electron] Received request to open directory: ${dirPath}`);
+  if (dirPath) {
+    shell.openPath(dirPath)
+      .then(result => {
+        if (result !== '') {
+          console.error(`[Electron] Error opening directory: ${result}`);
+          event.reply('open-directory-result', { success: false, error: result });
+        } else {
+          console.log(`[Electron] Successfully opened directory: ${dirPath}`);
+          event.reply('open-directory-result', { success: true });
+        }
+      })
+      .catch(err => {
+        console.error('[Electron] Error opening directory:', err);
+        event.reply('open-directory-result', { success: false, error: err.message });
+      });
+  } else {
+    console.error('[Electron] Invalid directory path received');
+    event.reply('open-directory-result', { success: false, error: 'Invalid path' });
   }
 });
