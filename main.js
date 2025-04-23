@@ -112,13 +112,19 @@ async function startServer() {
     console.log('[Electron] Iniciando servidor en modo desarrollo...');
     
     const serverPath = path.join(__dirname, 'server', 'server.js');
-    const nodeExecutable = process.execPath;
     const nodeModulesPath = path.join(__dirname, 'node_modules');
     
-    // Usar spawn para iniciar el servidor
+    // Usar nodemon en desarrollo para recarga automática
     serverProcess = spawn(
-      process.platform === 'win32' ? 'node' : 'node',
-      [serverPath],
+      process.platform === 'win32' ? 
+        path.join(__dirname, 'node_modules', '.bin', 'nodemon.cmd') : 
+        path.join(__dirname, 'node_modules', '.bin', 'nodemon'),
+      [
+        '-L',
+        '--watch', 'server',
+        '--ext', 'js,json',
+        serverPath
+      ],
       {
         stdio: 'pipe',
         env: {

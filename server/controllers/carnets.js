@@ -23,9 +23,23 @@ const generarCarnets = async (req, res) => {
     try {
         const { nombreEmpresa } = req.body;
         const startTime = Date.now();
+
+        // 1. Preparar directorios
+        const qrDir = path.join(cardsPath, nombreEmpresa, 'qrs_temp');
+        const outputDir = path.join(cardsPath, nombreEmpresa);
+        const tempDir = path.join(cardsPath, nombreEmpresa, 'temp');
+        ensureDirectoryExists(qrDir);
+        ensureDirectoryExists(outputDir);
+        ensureDirectoryExists(tempDir);
+
+        // 2. Cargar datos y configuración
+        WebSocketManager.send(JSON.stringify({
+            type: 'progress',
+            message: 'Cargando datos y configuración...'
+        }));
+        
         const { pathFirmaGemsap, firmaSeleccionada, firmas } = getSettings();
         const firmaData = firmas.find(fir => fir.firma === firmaSeleccionada);
-        const outputDir = path.join(cardsPath, nombreEmpresa);
 
         // Inicializar el handler con HeaderExtension
         const headerExtension = new HeaderExtension();
@@ -41,7 +55,12 @@ const generarCarnets = async (req, res) => {
         const clientsSheet = plantillaX.Sheets['data'];
         const dataClient = reader.utils.sheet_to_json(clientsSheet);
 
-        // Crear objeto base
+        // 3. Crear objeto base para los carnets
+        WebSocketManager.send(JSON.stringify({
+            type: 'progress',
+            message: 'Preparando datos base para carnets...'
+        }));
+        
         const toFillBase = {
             nombreFirma: firmaData.nombreFirma,
             tituloFirma: firmaData.tituloFirma,
@@ -62,17 +81,23 @@ const generarCarnets = async (req, res) => {
             }
         };
 
-        // Crear directorio si no existe
-        ensureDirectoryExists(path.join(cardsPath, nombreEmpresa));
-
-        let contador = 1;
-        WebSocketManager.send(contador + ' de ' + dataClient.length);
-
-        // Dividir clientes en paquetes de 4
+        // 4. Dividir clientes en paquetes y procesar
+        WebSocketManager.send(JSON.stringify({
+            type: 'progress',
+            message: `Preparando paquetes de carnets para ${dataClient.length} clientes...`
+        }));
+        
         const paquetes = dividirEnPaquetes(dataClient, 4);
+        let contador = 1;
+        let pdfResults = [];
 
-        // Procesar cada paquete
+        // 5. Procesar cada paquete
         for (let index = 0; index < paquetes.length; index++) {
+            WebSocketManager.send(JSON.stringify({
+                type: 'progress',
+                message: `Procesando paquete ${index+1}/${paquetes.length} (${contador} de ${dataClient.length} carnets)...`
+            }));
+            
             // Procesar el paquete actual
             const toFill = await processCardPackage(paquetes[index], toFillBase, QRTemplate);
 
@@ -80,28 +105,69 @@ const generarCarnets = async (req, res) => {
             const doc = await handler.process(file, toFill);
             const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
 
-            // Guardar y procesar PDF
-            const pdfFileName = `${nombreEmpresa}/Paquete${index}.pdf`;
-            const pdfFilePath = path.join(cardsPath, pdfFileName);
+            // Guardar PDF
+            const pdfFileName = `Paquete${index}.pdf`;
+            const pdfFilePath = path.join(outputDir, pdfFileName);
             fs.writeFileSync(pdfFilePath, pdfBuf);
-
-            // Procesar imágenes
-            //const outputDir = path.join(cardsPath, "images");
-            await processPdfWithImages(pdfFilePath, outputDir);
+            
+            // Agregar a resultados para procesar imágenes después
+            pdfResults.push({ pdfPath: pdfFilePath, paqueteIndex: index });
 
             contador += paquetes[index].length;
-            WebSocketManager.send(contador + ' de ' + dataClient.length);
+        }
+
+        // 6. Procesar imágenes para todos los paquetes
+        WebSocketManager.send(JSON.stringify({
+            type: 'progress',
+            message: 'Procesando imágenes de carnets...'
+        }));
+        
+        for (const result of pdfResults) {
+            await processPdfWithImages(result.pdfPath, tempDir);
+            WebSocketManager.send(JSON.stringify({
+                type: 'progress',
+                message: `Procesado paquete ${result.paqueteIndex + 1}/${paquetes.length}...`
+            }));
+        }
+
+        // 7. Limpieza final con manejo de errores
+        WebSocketManager.send(JSON.stringify({
+            type: 'progress',
+            message: 'Finalizando proceso y limpiando archivos temporales...'
+        }));
+        
+        try {
+            if (fs.existsSync(qrDir)) {
+                fs.rmSync(qrDir, { recursive: true, force: true });
+            }
+            if (fs.existsSync(tempDir)) {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+            }
+        } catch (cleanupError) {
+            console.log('Aviso: Error en limpieza final:', cleanupError.code);
         }
 
         const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
-        WebSocketManager.send('Ready');
+
+        // Final completion message
+        WebSocketManager.send(JSON.stringify({
+            type: 'status',
+            status: 'ready',
+            message: `${dataClient.length} Carnets generados con éxito en ${totalTime} segundos`
+        }));
+
         res.json({ 
-            msg: `${dataClient.length} Certificados generados con éxito en ${totalTime} segundos`,
+            msg: `${dataClient.length} Carnets generados con éxito en ${totalTime} segundos`,
             outputDir
         });
     } catch (error) {
         console.error(error);
-        WebSocketManager.send('Error');
+        WebSocketManager.send(JSON.stringify({
+            type: 'status',
+            status: 'error',
+            message: 'Error al procesar los carnets: ' + error.message
+        }));
+        
         handleError(res, error);
     }
 };

@@ -1,0 +1,9 @@
+{
+  "watch": ["server/**/*"],
+  "ext": "js,json,jsx",
+  "ignore": ["node_modules", "build", ".git"],
+  "delay": "500",
+  "verbose": true,
+  "exec": "babel-node server/server.js",
+  "legacyWatch": true
+} 

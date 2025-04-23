@@ -79,7 +79,7 @@
     "react-start": "cross-env BROWSER=none react-scripts start",
     "react-build": "react-scripts build",
     "server-build": "babel server --out-dir build-server",
-    "server-start": "nodemon --watch server --exec babel-node server/server.js",
+    "server-start": "nodemon -L --config nodemon.json",
     "dev": "yarn clean && concurrently \"cross-env BROWSER=none react-scripts start\" \"electron .\"",
     "electron-pack": "yarn electron-builder -c.extraMetadata.main='./main.js'",
     "preelectron-pack": "yarn react-build && yarn server-build",
