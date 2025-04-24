@@ -273,7 +273,7 @@ function numeroASerieFecha(numero) {
 }
 
 // Modify the processBatchDocuments function to receive meses as a parameter
-async function processBatchDocuments(clients, file, toFillBase, qrResults, outputPath, fecha, meses) {
+async function processBatchDocuments(clients, file, toFillBase, qrResults, outputPath, fecha, meses, prefix) {
     
     
     const handler = new TemplateHandler({});
@@ -320,7 +320,7 @@ async function processBatchDocuments(clients, file, toFillBase, qrResults, outpu
         });
 
         const pdfBuf = await libre.convertAsync(doc, '.pdf', undefined);
-        const pdfFileName = `CMA_${apellidos.split(' ')[0]}_${nombres.split(' ')[0]}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`;
+        const pdfFileName = `${prefix}_${apellidos.split(' ')[0].toUpperCase()}_${nombres.split(' ')[0].toUpperCase()}_${fechaDate.getUTCMonth() + 1}_${fechaDate.getFullYear()}_${cc}.pdf`;
         const pdfPath = path.join(outputPath, pdfFileName);
         
         fs.writeFileSync(pdfPath, pdfBuf);

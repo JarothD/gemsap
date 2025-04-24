@@ -2,6 +2,7 @@ import Swal from 'sweetalert2'
 
 import { clienteAxios } from "../../config/axios";
 
+const textButton = 'Ver en Carpeta'
 // Función modularizada para abrir directorios
 export function abrirDirectorio(outputDir) {
     if (!outputDir) {
@@ -109,8 +110,14 @@ export async function generarCarnets(data){
         Swal.fire({
             icon:'success',
             title:'Éxito',
-            text: respuesta.data.msg
-        })
+            text: respuesta.data.msg,
+            confirmButtonText: textButton
+        }).then(() => {
+            // Usar la función modularizada para abrir el directorio
+            if (respuesta.data.outputDir) {
+                abrirDirectorio(respuesta.data.outputDir);
+            }
+        }, 100);
 
         
         
@@ -144,13 +151,13 @@ export async function cargueMasivo(data){
             icon:'success',
             title:'Éxito',
             text: respuesta.data.msg,
-            confirmButtonText: 'OK'
+            confirmButtonText: textButton
         }).then(() => {
             // Usar la función modularizada para abrir el directorio
             if (respuesta.data.outputDir) {
                 abrirDirectorio(respuesta.data.outputDir);
             }
-        });
+        }, 100);
         
     } catch (error) {
         if(error.name == 'AxiosError'){
@@ -185,7 +192,7 @@ export async function cargueCarnets(data){
                 icon:'success',
                 title:'Éxito',
                 text: respuesta.data.msg,
-                confirmButtonText: 'OK'
+                confirmButtonText: textButton
             }).then(() => {
                 // Usar la función modularizada para abrir el directorio
                 if (respuesta.data.outputDir) {
@@ -227,13 +234,13 @@ export async function cargueMasivoBebidas(data){
             icon:'success',
             title:'Éxito',
             text: respuesta.data.msg,
-            confirmButtonText: 'OK'
+            confirmButtonText: textButton
         }).then(() => {
             // Usar la función modularizada para abrir el directorio
             if (respuesta.data.outputDir) {
                 abrirDirectorio(respuesta.data.outputDir);
             }
-        });
+        }, 100);
         
     } catch (error) {
         if(error.name == 'AxiosError'){
@@ -272,7 +279,7 @@ export async function cargueModular(data) {
                 icon:'success',
                 title:'Éxito',
                 text: respuesta.data.msg,
-                confirmButtonText: 'OK'
+                confirmButtonText: textButton
             }).then(() => {
                 // Usar la función modularizada para abrir el directorio
                 if (respuesta.data.outputDir) {

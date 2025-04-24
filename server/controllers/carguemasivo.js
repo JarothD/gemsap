@@ -84,7 +84,8 @@ const procesarCargaMasiva = async (req, res) => {
             qrResults, 
             outputDir,
             fecha,
-            meses
+            meses,
+            'CMA'
         );
 
         // 6. Procesar imágenes en batch
