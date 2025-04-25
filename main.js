@@ -34,7 +34,7 @@ async function waitForServer(port, maxRetries = 30, retryInterval = 500) {
         const req = http.request({
           hostname: 'localhost',
           port: port,
-          path: '/health',
+          path: port === 3000 ? '/' : '/health',
           method: 'GET',
           timeout: 1000
         }, (res) => {
@@ -167,6 +167,12 @@ async function createWindow() {
   // Iniciar el servidor antes de crear la ventana
   await startServer();
   
+  // Esperar a que el servidor de desarrollo react esté disponible
+  if (isDev) {
+    console.log('[Electron] Esperando a que el servidor de desarrollo React esté disponible...');
+    await waitForServer(3000, 60, 1000); // 60 segundos de tiempo de espera, intervalos de 1 segundo
+  }
+  
   // Set custom cache path before creating window
   const userDataPath = path.join(app.getPath('temp'), 'electron-cache');
   app.setPath('userData', userDataPath);
@@ -247,15 +253,60 @@ async function createWindow() {
   });
 
   // Cargar la URL apropiada
-  mainWindow.loadURL(
-    isDev
+  const loadUrl = isDev
       ? "http://localhost:3000"
       : url.format({
           pathname: path.join(__dirname, 'build/index.html'),
           protocol: 'file:',
           slashes: true,
-        })
-  );
+        });
+  
+  console.log(`[Electron] Cargando URL: ${loadUrl}`);
+  
+  // Agregar evento para diagnosticar errores de carga
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error(`[Electron] Error al cargar URL (${validatedURL}): ${errorDescription} (code: ${errorCode})`);
+    
+    // Si es error de conexión rehusada y estamos en desarrollo, esperamos y reintentamos
+    if (errorCode === -102 && isDev && validatedURL.includes('localhost:3000')) {
+      console.log('[Electron] Reintentando cargar la URL en 2 segundos...');
+      setTimeout(() => {
+        console.log('[Electron] Reintentando cargar URL:', loadUrl);
+        mainWindow.loadURL(loadUrl);
+      }, 2000);
+    }
+  });
+  
+  // Cargar URL con reintentos
+  let retryCount = 0;
+  const maxRetries = 5;
+  
+  function loadWithRetry() {
+    console.log(`[Electron] Intento ${retryCount + 1}/${maxRetries} para cargar URL: ${loadUrl}`);
+    
+    mainWindow.loadURL(loadUrl)
+      .catch(err => {
+        console.error('[Electron] Error al cargar URL:', err);
+        retryCount++;
+        
+        if (retryCount < maxRetries) {
+          console.log(`[Electron] Reintentando en ${retryCount * 1000}ms...`);
+          setTimeout(loadWithRetry, retryCount * 1000);
+        } else {
+          console.error('[Electron] Número máximo de reintentos alcanzado.');
+          // Cargar una página de error
+          mainWindow.loadURL(
+            url.format({
+              pathname: path.join(__dirname, 'error.html'),
+              protocol: 'file:',
+              slashes: true
+            })
+          ).catch(e => console.error('No se pudo cargar página de error:', e));
+        }
+      });
+  }
+  
+  loadWithRetry();
 
   mainWindow.removeMenu();
 
@@ -282,11 +333,13 @@ async function createWindow() {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self';" +
-          "script-src 'self' 'unsafe-inline' http://localhost:*;" +
-          "style-src 'self' 'unsafe-inline';" +
-          "img-src 'self' https://gemsap.com data:;" +
-          "connect-src 'self' ws://localhost:* http://localhost:*;"
+          isDev 
+            ? "default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob: ws://localhost:* http://localhost:*;" 
+            : "default-src 'self';" +
+              "script-src 'self' 'unsafe-inline';" +
+              "style-src 'self' 'unsafe-inline';" +
+              "img-src 'self' https://gemsap.com data:;" +
+              "connect-src 'self' ws://localhost:* http://localhost:*;"
         ]
       }
     });
@@ -493,20 +546,53 @@ app.on('browser-window-closed', (_, window) => {
 ipcMain.on('open-directory', (event, dirPath) => {
   console.log(`[Electron] Received request to open directory: ${dirPath}`);
   if (dirPath) {
-    shell.openPath(dirPath)
-      .then(result => {
-        if (result !== '') {
-          console.error(`[Electron] Error opening directory: ${result}`);
-          event.reply('open-directory-result', { success: false, error: result });
-        } else {
-          console.log(`[Electron] Successfully opened directory: ${dirPath}`);
-          event.reply('open-directory-result', { success: true });
-        }
-      })
-      .catch(err => {
-        console.error('[Electron] Error opening directory:', err);
-        event.reply('open-directory-result', { success: false, error: err.message });
-      });
+    // Verificar si es un archivo o un directorio
+    const fs = require('fs');
+    const path = require('path');
+    
+    try {
+      const stats = fs.statSync(dirPath);
+      
+      // Si es un archivo, usar showItemInFolder para mostrarlo seleccionado
+      if (stats.isFile()) {
+        console.log(`[Electron] Opening file with selection: ${dirPath}`);
+        shell.showItemInFolder(dirPath);
+        event.reply('open-directory-result', { success: true });
+      } else {
+        // Si es un directorio, usar openPath como antes
+        shell.openPath(dirPath)
+          .then(result => {
+            if (result !== '') {
+              console.error(`[Electron] Error opening directory: ${result}`);
+              event.reply('open-directory-result', { success: false, error: result });
+            } else {
+              console.log(`[Electron] Successfully opened directory: ${dirPath}`);
+              event.reply('open-directory-result', { success: true });
+            }
+          })
+          .catch(err => {
+            console.error('[Electron] Error opening directory:', err);
+            event.reply('open-directory-result', { success: false, error: err.message });
+          });
+      }
+    } catch (err) {
+      // Si hay error al verificar el estado del archivo, intentar con openPath genérico
+      console.warn(`[Electron] Error checking if path is file or directory: ${err.message}`);
+      shell.openPath(dirPath)
+        .then(result => {
+          if (result !== '') {
+            console.error(`[Electron] Error opening path: ${result}`);
+            event.reply('open-directory-result', { success: false, error: result });
+          } else {
+            console.log(`[Electron] Successfully opened path: ${dirPath}`);
+            event.reply('open-directory-result', { success: true });
+          }
+        })
+        .catch(err => {
+          console.error('[Electron] Error opening path:', err);
+          event.reply('open-directory-result', { success: false, error: err.message });
+        });
+    }
   } else {
     console.error('[Electron] Invalid directory path received');
     event.reply('open-directory-result', { success: false, error: 'Invalid path' });

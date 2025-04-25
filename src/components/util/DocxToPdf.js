@@ -27,6 +27,46 @@ export function abrirDirectorio(outputDir) {
     }
     
     try {
+        // Verificar si outputDir es una ruta a un archivo PDF
+        const esPDF = typeof outputDir === 'string' && outputDir.toLowerCase().endsWith('.pdf');
+        
+        if (esPDF) {
+            console.log("Es un archivo PDF:", outputDir);
+            
+            // Extraer el directorio del PDF en caso de que el archivo no exista
+            const lastSeparatorIndex = Math.max(
+                outputDir.lastIndexOf('/'), 
+                outputDir.lastIndexOf('\\')
+            );
+            
+            let dirPath = outputDir;
+            if (lastSeparatorIndex > 0) {
+                dirPath = outputDir.substring(0, lastSeparatorIndex);
+            }
+            
+            // Intentar abrir el PDF con selección
+            return window.electronAPI.openDirectory(outputDir)
+                .then(() => {
+                    console.log("Archivo PDF abierto con selección");
+                    return true;
+                })
+                .catch(err => {
+                    console.error("Error al abrir archivo PDF:", err);
+                    // Si falla al abrir el archivo, intentar abrir solo el directorio padre
+                    console.log("Intentando abrir el directorio padre:", dirPath);
+                    return window.electronAPI.openDirectory(dirPath)
+                        .then(() => {
+                            console.log("Directorio padre abierto con éxito");
+                            return true;
+                        })
+                        .catch(err2 => {
+                            console.error("Error al abrir directorio padre:", err2);
+                            return false;
+                        });
+                });
+        }
+        
+        // Si no es PDF, comportamiento normal
         console.log("Intentando abrir directorio:", outputDir);
         return window.electronAPI.openDirectory(outputDir)
             .then(() => {
@@ -58,9 +98,14 @@ export async function llenarDocx(data, type){
             Swal.fire({
                 icon:'success',
                 title:'Éxito',
-                text: 'Certificado ' + respuesta.data.msg + ' creado con éxito'
-            })
-
+                text: 'Certificado ' + respuesta.data.msg + ' creado con éxito',
+                confirmButtonText: textButton
+            }).then(() => {
+                // Usar la función modularizada para abrir el directorio
+                if (respuesta.data.outputDir) {
+                    abrirDirectorio(respuesta.data.outputDir);
+                }
+            }, 100);
         }
         if(type === 'Bebidas'){
             const respuesta = await clienteAxios.post('/bebidas', {
@@ -73,9 +118,14 @@ export async function llenarDocx(data, type){
             Swal.fire({
                 icon:'success',
                 title:'Éxito',
-                text: 'Certificado ' + respuesta.data.msg + ' creado con éxito'
-            })
-
+                text: 'Certificado ' + respuesta.data.msg + ' creado con éxito',
+                confirmButtonText: textButton
+            }).then(() => {
+                // Usar la función modularizada para abrir el directorio
+                if (respuesta.data.outputDir) {
+                    abrirDirectorio(respuesta.data.outputDir);
+                }
+            }, 100);
         }
         
     } catch (error) {

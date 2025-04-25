@@ -180,9 +180,10 @@ const crearCertificado = async (req, res) => {
 
         const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
         console.log(`Certificado completado en ${totalTime} segundos`);
-        
+        const outputDir = getPdfFilePath(nombres, apellidos, fecha, cc)
         res.status(200).json({ 
-            msg: `${getFileName(nombres, apellidos, fecha, cc)} Completado en ${totalTime} segundos` 
+            msg: `${getFileName(nombres, apellidos, fecha, cc)} Completado en ${totalTime} segundos`,
+            outputDir
         });
 
     } catch (error) {
