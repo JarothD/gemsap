@@ -5,6 +5,10 @@ const { spawn } = require('child_process');
 const { app, BrowserWindow, session, ipcMain, screen, shell } = require("electron");
 const isDev = require("electron-is-dev");
 
+// Configurar metadatos de la aplicación
+app.setAppUserModelId("com.electron-react-node");
+app.setName("GEMSAP Certificados");
+
 let mainWindow;
 let server; // Referencia al servidor
 let serverProcess; // Referencia al proceso del servidor en desarrollo
@@ -173,6 +177,11 @@ async function createWindow() {
     await waitForServer(3000, 60, 1000); // 60 segundos de tiempo de espera, intervalos de 1 segundo
   }
   
+  // Asegurarse que la aplicación tenga el ícono correcto en la barra de tareas de Windows
+  if (process.platform === 'win32') {
+    app.setAppUserModelId(app.name);
+  }
+  
   // Set custom cache path before creating window
   const userDataPath = path.join(app.getPath('temp'), 'electron-cache');
   app.setPath('userData', userDataPath);
@@ -207,7 +216,8 @@ async function createWindow() {
     minHeight: Math.round(workArea.height * 0.3), 
     maxWidth: Math.round(workArea.width * 0.5), 
     maxHeight: Math.round(workArea.height * 0.9),
-    icon: path.join(__dirname, "public/favicon.ico"),
+    icon: path.join(__dirname, "assets/icon.ico"),
+    title: "GEMSAP Certificados",
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -413,6 +423,21 @@ app.whenReady().then(createWindow);
 // WebSocket connection tracking across renderer processes
 const wsConnections = new Map(); // Track WebSocket connections by window ID
 
+// Configurar acceso directo con el ícono correcto al instalar (Windows)
+if (process.platform === 'win32' && !isDev) {
+  const { join } = require('path');
+  app.setUserTasks([
+    {
+      program: process.execPath,
+      arguments: '',
+      iconPath: join(__dirname, 'assets/icon.ico'),
+      iconIndex: 0,
+      title: 'GEMSAP Certificados',
+      description: 'Abrir GEMSAP Certificados'
+    }
+  ]);
+}
+
 // Handle WebSocket initialization from renderer process
 ipcMain.on('ws-initialized', (event, data) => {
   const { windowId, timestamp } = data;
@@ -576,8 +601,40 @@ ipcMain.on('open-directory', (event, dirPath) => {
           });
       }
     } catch (err) {
-      // Si hay error al verificar el estado del archivo, intentar con openPath genérico
+      // Si hay error al verificar el estado del archivo, intentar identificar si es un PDF
       console.warn(`[Electron] Error checking if path is file or directory: ${err.message}`);
+      
+      // Si es un error ENOENT (archivo no encontrado), y parece ser un archivo PDF
+      // intentar extraer el directorio padre y abrirlo
+      if (err.code === 'ENOENT' && typeof dirPath === 'string' && dirPath.toLowerCase().endsWith('.pdf')) {
+        console.log('[Electron] Archivo PDF no encontrado, intentando abrir directorio padre');
+        
+        // Extraer el directorio padre
+        const parentDir = path.dirname(dirPath);
+        console.log(`[Electron] Directorio padre: ${parentDir}`);
+        
+        // Verificar si el directorio padre existe
+        if (fs.existsSync(parentDir)) {
+          console.log(`[Electron] El directorio padre existe, intentando abrirlo: ${parentDir}`);
+          shell.openPath(parentDir)
+            .then(result => {
+              if (result !== '') {
+                console.error(`[Electron] Error opening parent directory: ${result}`);
+                event.reply('open-directory-result', { success: false, error: result });
+              } else {
+                console.log(`[Electron] Successfully opened parent directory: ${parentDir}`);
+                event.reply('open-directory-result', { success: true });
+              }
+            })
+            .catch(err => {
+              console.error('[Electron] Error opening parent directory:', err);
+              event.reply('open-directory-result', { success: false, error: err.message });
+            });
+          return;
+        }
+      }
+      
+      // Intentar con openPath genérico como último recurso
       shell.openPath(dirPath)
         .then(result => {
           if (result !== '') {
@@ -597,4 +654,48 @@ ipcMain.on('open-directory', (event, dirPath) => {
     console.error('[Electron] Invalid directory path received');
     event.reply('open-directory-result', { success: false, error: 'Invalid path' });
   }
+});
+
+// Función para actualizar el caché de íconos en Windows (para menú de inicio)
+async function refreshWindowsIconCache() {
+  if (process.platform === 'win32') {
+    try {
+      const { execFile } = require('child_process');
+      const fs = require('fs');
+      console.log('[Electron] Intentando actualizar caché de íconos...');
+      
+      // Este comando obliga a Windows a reconstruir el caché de íconos
+      await new Promise((resolve) => {
+        execFile('ie4uinit.exe', ['-ClearIconCache'], (err) => {
+          if (err) {
+            console.warn('[Electron] Error al limpiar caché con ie4uinit:', err);
+          } else {
+            console.log('[Electron] Caché de íconos limpiado con ie4uinit');
+          }
+          resolve();
+        });
+      });
+      
+      // Método alternativo para Windows 10/11
+      await new Promise((resolve) => {
+        execFile('ie4uinit.exe', ['-show'], (err) => {
+          if (err) {
+            console.warn('[Electron] Error al actualizar caché con ie4uinit -show:', err);
+          } else {
+            console.log('[Electron] Caché de íconos actualizado con ie4uinit -show');
+          }
+          resolve();
+        });
+      });
+      
+      console.log('[Electron] Proceso de actualización de caché de íconos completado');
+    } catch (err) {
+      console.error('[Electron] Error al actualizar caché de íconos:', err);
+    }
+  }
+}
+
+// Ejecutar la actualización del caché de íconos al iniciar
+app.whenReady().then(() => {
+  setTimeout(refreshWindowsIconCache, 2000);
 });

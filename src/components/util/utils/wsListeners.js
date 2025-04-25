@@ -92,7 +92,7 @@ const setupGlobalSwalUpdater = () => {
                     log('Process completed, showing success message with confirm button', LOG_LEVELS.INFO);
                     
                     // Use SwalAlert's success method directly which has confirmation button
-                    SwalAlert.success('¡Proceso completado!', 'La operación ha finalizado con éxito');
+                    //SwalAlert.success('¡Proceso completado!', 'La operación ha finalizado con éxito');
                 } 
                 else if (messageData === 'Error' || (messageData.type === 'error')) {
                     log('Error occurred', LOG_LEVELS.ERROR);

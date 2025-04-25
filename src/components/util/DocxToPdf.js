@@ -44,7 +44,10 @@ export function abrirDirectorio(outputDir) {
                 dirPath = outputDir.substring(0, lastSeparatorIndex);
             }
             
-            // Intentar abrir el PDF con selección
+            // Normalizar el directorio base de Gemsap independientemente del formato del archivo
+            const basePath = "C:\\Gemsap\\Certificados";
+            
+            // Intentar abrir el PDF con selección primero
             return window.electronAPI.openDirectory(outputDir)
                 .then(() => {
                     console.log("Archivo PDF abierto con selección");
@@ -52,21 +55,46 @@ export function abrirDirectorio(outputDir) {
                 })
                 .catch(err => {
                     console.error("Error al abrir archivo PDF:", err);
-                    // Si falla al abrir el archivo, intentar abrir solo el directorio padre
-                    console.log("Intentando abrir el directorio padre:", dirPath);
-                    return window.electronAPI.openDirectory(dirPath)
+                    
+                    // Si falla, intentar abrir el directorio padre
+                    if (dirPath) {
+                        console.log("Intentando abrir el directorio padre:", dirPath);
+                        return window.electronAPI.openDirectory(dirPath)
+                            .then(() => {
+                                console.log("Directorio padre abierto con éxito");
+                                return true;
+                            })
+                            .catch(err2 => {
+                                console.error("Error al abrir directorio padre:", err2);
+                                
+                                // Como último recurso, abrir el directorio base de Gemsap
+                                console.log("Intentando abrir directorio base Gemsap:", basePath);
+                                return window.electronAPI.openDirectory(basePath)
+                                    .then(() => {
+                                        console.log("Directorio base Gemsap abierto con éxito");
+                                        return true;
+                                    })
+                                    .catch(err3 => {
+                                        console.error("Error al abrir directorio base Gemsap:", err3);
+                                        return false;
+                                    });
+                            });
+                    }
+                    
+                    // Si no hay directorio padre válido, intentar directamente con el base
+                    return window.electronAPI.openDirectory(basePath)
                         .then(() => {
-                            console.log("Directorio padre abierto con éxito");
+                            console.log("Directorio base Gemsap abierto como fallback");
                             return true;
                         })
                         .catch(err2 => {
-                            console.error("Error al abrir directorio padre:", err2);
+                            console.error("Error al abrir directorio base Gemsap:", err2);
                             return false;
                         });
                 });
         }
         
-        // Si no es PDF, comportamiento normal
+        // Si no es PDF, comportamiento normal para directorios
         console.log("Intentando abrir directorio:", outputDir);
         return window.electronAPI.openDirectory(outputDir)
             .then(() => {
@@ -75,7 +103,19 @@ export function abrirDirectorio(outputDir) {
             })
             .catch(err => {
                 console.error("Error al abrir directorio:", err);
-                return false;
+                
+                // Si falla, intentar con el directorio base de Gemsap como fallback
+                const basePath = "C:\\Gemsap\\Certificados";
+                console.log("Intentando abrir directorio base como fallback:", basePath);
+                return window.electronAPI.openDirectory(basePath)
+                    .then(() => {
+                        console.log("Directorio base abierto con éxito como fallback");
+                        return true;
+                    })
+                    .catch(err2 => {
+                        console.error("Error al abrir directorio base:", err2);
+                        return false;
+                    });
             });
     } catch (error) {
         console.error("Error al intentar abrir directorio:", error);

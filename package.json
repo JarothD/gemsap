@@ -2,7 +2,7 @@
   "name": "gemsap",
   "description": "Creador de Certificados",
   "author": "Jarothi",
-  "version": "0.7.0",
+  "version": "1.0.0",
   "private": true,
   "dependencies": {
     "@babel/cli": "^7.20.7",
@@ -70,6 +70,34 @@
     ],
     "directories": {
       "buildResources": "assets"
+    },
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "requestedExecutionLevel": "requireAdministrator"
+    },
+    "nsis": {
+      "runAfterFinish": false,
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "GEMSAP Certificados",
+      "perMachine": true,
+      "deleteAppDataOnUninstall": true
+    },
+    "mac": {
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "icon": "assets/icon.png"
     }
   },
   "main": "main.js",

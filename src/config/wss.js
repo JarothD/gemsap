@@ -64,6 +64,8 @@ class WebSocketClient {
         this.heartbeatTimer = null;
         this.lastActivity = Date.now();
         this.isPassive = false; // Flag to indicate if this instance should remain passive
+        this.lastHeartbeatResponse = Date.now();
+        this.heartbeatCheckTimer = null;
         
         // Store in global window object for singleton pattern
         if (typeof window !== 'undefined') {
@@ -242,9 +244,21 @@ class WebSocketClient {
         }
     }
     
+    // Handle connection error
+    _handleError(error) {
+        log(`WebSocket error: ${error}`, LOG_LEVELS.ERROR);
+        
+        // Marcar la conexión como no conectada para forzar un intento de reconexión
+        this.connected = false;
+        
+        // No need to do anything else here - onclose will be called after an error
+    }
+    
     // Handle connection close
     _handleClose(event) {
         this.connected = false;
+        
+        // Marcar el socket como nulo para permitir nuevo intento de conexión
         this.ws = null;
         
         // Clear timers
@@ -271,14 +285,15 @@ class WebSocketClient {
         
         // Don't attempt to reconnect if deliberately destroyed, closed, or in passive mode
         if (!this.destroyed && !this.isPassive) {
-            this._scheduleReconnect();
+            // Forzar un nuevo intento de conexión inmediato para casos donde el backend se reinicia
+            if (event.code === 1006) { // Código 1006 significa conexión cerrada anormalmente
+                log('Conexión cerrada anormalmente. Intentando reconectar inmediatamente...', LOG_LEVELS.INFO);
+                this.reconnectAttempts = 0; // Reiniciar contador de intentos
+                setTimeout(() => this.connect(), 1000); // Intento inmediato con un pequeño delay
+            } else {
+                this._scheduleReconnect();
+            }
         }
-    }
-    
-    // Handle connection error
-    _handleError(error) {
-        log(`WebSocket error: ${error}`, LOG_LEVELS.ERROR);
-        // No need to do anything here - onclose will be called after an error
     }
     
     // Handle incoming message
@@ -294,6 +309,9 @@ class WebSocketClient {
                 data = event.data;
             }
             
+            // Actualizar timestamp de último latido para cualquier mensaje que llegue
+            this.lastHeartbeatResponse = Date.now();
+            
             // Store connection ID if received in connection message
             if (data && data.type === 'connected') {
                 this.connectionId = data.id;
@@ -303,6 +321,12 @@ class WebSocketClient {
                 if (data.silent) {
                     return;
                 }
+            }
+            
+            // Specifically handle heartbeat-related messages
+            if (data && (data.type === 'heartbeat' || data.type === 'pong')) {
+                // Reset timeout counters since we got a valid response
+                this.lastHeartbeatResponse = Date.now();
             }
             
             // Only log important messages
@@ -343,8 +367,15 @@ class WebSocketClient {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
             
-            // Exponential backoff with minimum delay of 3 seconds
-            const delay = Math.min(3000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
+            // Modificar los tiempos de reconexión para ser más agresivos al principio
+            // Primeros intentos más rápidos, luego aumentar
+            let delay;
+            if (this.reconnectAttempts <= 2) {
+                delay = 1000; // 1 segundo para los primeros dos intentos
+            } else {
+                // Exponential backoff con un mínimo de 3 segundos para intentos posteriores
+                delay = Math.min(3000 * Math.pow(1.5, this.reconnectAttempts - 3), 30000);
+            }
             
             log(`Scheduling reconnection attempt ${this.reconnectAttempts} of ${this.maxReconnectAttempts} in ${Math.floor(delay/1000)}s`, LOG_LEVELS.INFO);
             
@@ -356,20 +387,57 @@ class WebSocketClient {
             log('Maximum reconnection attempts reached', LOG_LEVELS.ERROR);
             this.isReconnecting = false;
             
-            // Reset reconnect attempts after a longer cooling period
+            // Reset reconnect attempts after a shorter cooling period
             setTimeout(() => {
                 if (!this.destroyed) {
                     log('Resetting reconnection attempts after cooling period', LOG_LEVELS.INFO);
                     this.reconnectAttempts = 0;
                     this.connect();
                 }
-            }, 60000); // 1 minute cooling period
+            }, 30000); // 30 segundos de enfriamiento (reducido de 60s)
         }
     }
     
     // Start heartbeat to keep connection alive
     _startHeartbeat() {
         this._stopHeartbeat();
+        
+        // Añadir una verificación de estado activo además del ping
+        this.lastHeartbeatResponse = Date.now();
+        
+        // Verificar regularmente si se reciben respuestas a los pings
+        this.heartbeatCheckTimer = setInterval(() => {
+            const timeSinceLastResponse = Date.now() - this.lastHeartbeatResponse;
+            
+            // Si no se ha recibido respuesta en 45 segundos, consideramos que la conexión está muerta
+            if (timeSinceLastResponse > 45000 && this.ws) {
+                log('No heartbeat response received in 45 seconds. Connection appears dead.', LOG_LEVELS.ERROR);
+                
+                // Forzar cierre y reconexión
+                try {
+                    // Cerrar conexión actual y forzar reconexión
+                    if (this.ws) {
+                        const oldWs = this.ws;
+                        this.ws = null; // Evitar que _handleClose programe una reconexión
+                        this.connected = false;
+                        
+                        try {
+                            oldWs.onclose = null; // Desactivar handler de cierre para evitar bucle
+                            oldWs.close();
+                        } catch (e) {
+                            log(`Error closing dead WebSocket: ${e}`, LOG_LEVELS.ERROR);
+                        }
+                        
+                        // Forzar reconexión inmediata
+                        this.reconnectAttempts = 0;
+                        this.isReconnecting = false;
+                        setTimeout(() => this.connect(), 1000);
+                    }
+                } catch (e) {
+                    log(`Error handling heartbeat timeout: ${e}`, LOG_LEVELS.ERROR);
+                }
+            }
+        }, 15000); // Verificar cada 15 segundos
         
         // Send ping every 30 seconds
         this.heartbeatTimer = setInterval(() => {
@@ -388,6 +456,11 @@ class WebSocketClient {
         if (this.heartbeatTimer) {
             clearInterval(this.heartbeatTimer);
             this.heartbeatTimer = null;
+        }
+        
+        if (this.heartbeatCheckTimer) {
+            clearInterval(this.heartbeatCheckTimer);
+            this.heartbeatCheckTimer = null;
         }
     }
     

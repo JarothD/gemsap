@@ -111,7 +111,11 @@ const procesarCargaMasivoBebidas = async (req, res) => {
         }
 
         const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
-        WebSocketManager.send('Ready');
+        WebSocketManager.send(JSON.stringify({
+            type: 'status',
+            status: 'ready',
+            message: `${dataClient.length} Certificados generados con éxito en ${totalTime} segundos`
+        }));
         res.json({ 
             msg: `${dataClient.length} Certificados generados con éxito en ${totalTime} segundos`,
             outputDir

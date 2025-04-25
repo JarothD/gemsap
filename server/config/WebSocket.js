@@ -516,4 +516,30 @@ process.on('uncaughtException', (error) => {
     log('Server NOT Exiting...', LOG_LEVELS.INFO);
 });
 
+// Función para cerrar el servidor WebSocket explícitamente
+const closeWebSocketServer = () => {
+    log('Closing WebSocket server explicitly', LOG_LEVELS.INFO);
+    clearInterval(interval);
+    clearInterval(heartbeatInterval);
+    
+    // Notificar a todos los clientes que el servidor se está cerrando
+    WebSocketManager.broadcast({
+        type: 'server_shutdown',
+        message: 'Server is shutting down',
+        timestamp: Date.now()
+    });
+    
+    // Cerrar todas las conexiones activas
+    WebSocketManager.activeSockets.forEach((socket, id) => {
+        WebSocketManager.removeSocket(id);
+    });
+    
+    // Cerrar el servidor
+    wsServer.close(() => {
+        log('WebSocket server closed successfully', LOG_LEVELS.INFO);
+    });
+};
+
+// Exportar el WebSocketManager y la función de cierre
 module.exports = WebSocketManager;
+module.exports.closeWebSocketServer = closeWebSocketServer;

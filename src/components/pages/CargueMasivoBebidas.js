@@ -44,7 +44,7 @@ const CargueMasivoBebidas = () => {
                 else if (messageData === 'Ready' || (messageData.type === 'status' && messageData.status === 'ready')) {
                     setCargando('Proceso completado');
                     // Mostrar mensaje de éxito con botón de confirmación
-                    SwalAlert.success('¡Proceso completado!', 'La operación ha finalizado con éxito');
+                    //SwalAlert.success('¡Proceso completado!', 'La operación ha finalizado con éxito');
                 } 
                 else if (messageData === 'Error' || (messageData.type === 'error')) {
                     SwalAlert.validations.archivos();

@@ -147,7 +147,7 @@ const crearCertificado = async (req, res) => {
                 height: 802
             }
         };
-        
+                
         console.log('Variables para plantilla:', Object.keys(data));
 
         // Procesar documento usando cache y añadir QR
@@ -157,7 +157,7 @@ const crearCertificado = async (req, res) => {
         // Convertir a PDF
         console.log('Convirtiendo documento a PDF');
         const pdfBuf = await convertToPdf(doc);
-        const pdfFilePath = getPdfFilePath(nombres, apellidos, cc, fecha);
+        const pdfFilePath = getPdfFilePath(nombres, apellidos, fecha, cc);
         
         // Escribir el archivo PDF
         console.log('Guardando PDF en:', pdfFilePath);
@@ -180,7 +180,7 @@ const crearCertificado = async (req, res) => {
 
         const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
         console.log(`Certificado completado en ${totalTime} segundos`);
-        const outputDir = getPdfFilePath(nombres, apellidos, fecha, cc)
+        const outputDir = getPdfFilePath(nombres, apellidos, fecha, cc);
         res.status(200).json({ 
             msg: `${getFileName(nombres, apellidos, fecha, cc)} Completado en ${totalTime} segundos`,
             outputDir
@@ -222,7 +222,7 @@ const getFileName = (nombres, apellidos, fecha, cc) => {
     return `CMA_${apellidos.split(' ')[0]}_${nombres.split(' ')[0]}_${mes}_${fechaDate.getFullYear()}_${cc}`;
 };
 
-const getPdfFilePath = (nombres, apellidos, cc, fecha) => {
+const getPdfFilePath = (nombres, apellidos, fecha, cc) => {
     const fileName = getFileName(nombres, apellidos, fecha, cc);
     return path.join(resultPath, `${fileName}.pdf`);
 };

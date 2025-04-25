@@ -20,12 +20,18 @@ const useWebSocket = () => {
   // Last error if any
   const [error, setError] = useState(null);
   
+  // Track consecutive connection failures
+  const connectionFailures = useRef(0);
+  
   // Track if component is mounted to prevent state updates after unmount
   const isMounted = useRef(true);
   
   // Handle incoming messages
   const handleMessage = useCallback((data) => {
     if (!isMounted.current) return;
+    
+    // Reset connection failures counter on successful message
+    connectionFailures.current = 0;
     
     // Only update state if the component is still mounted
     setLastMessage(data);
@@ -56,6 +62,21 @@ const useWebSocket = () => {
     if (connected !== isConnected && isMounted.current) {
       setConnected(isConnected);
       setConnectionId(clientRef.current.getConnectionId());
+      
+      // Si perdimos la conexión, incrementar contador de fallos
+      if (!isConnected) {
+        connectionFailures.current += 1;
+        
+        // Si detectamos múltiples fallos consecutivos, forzar reconexión
+        if (connectionFailures.current >= 2) {
+          setTimeout(() => {
+            reconnect();
+          }, 1000);
+        }
+      } else {
+        // Reset contador si estamos conectados
+        connectionFailures.current = 0;
+      }
     }
     
     return isConnected;
@@ -67,6 +88,7 @@ const useWebSocket = () => {
     
     try {
       clientRef.current.reconnect();
+      console.log('Forzando reconexión WebSocket');
     } catch (err) {
       if (isMounted.current) {
         setError(err);
@@ -76,16 +98,21 @@ const useWebSocket = () => {
   
   // Setup WebSocket on component mount
   useEffect(() => {
-    // Check connection status every 2 seconds
+    // Check connection status more frequently (cada segundo)
     const statusInterval = setInterval(() => {
       checkConnection();
-    }, 2000);
+    }, 1000);
     
     // Setup message handler
     const removeHandler = clientRef.current.addMessageHandler(handleMessage);
     
     // Initial connection check
     checkConnection();
+    
+    // Si no estamos conectados al inicio, intentar reconexión
+    if (!clientRef.current.isConnected()) {
+      setTimeout(reconnect, 1000);
+    }
     
     // Cleanup function
     return () => {
@@ -97,7 +124,7 @@ const useWebSocket = () => {
         removeHandler();
       }
     };
-  }, [checkConnection, handleMessage]);
+  }, [checkConnection, handleMessage, reconnect]);
   
   // Return the WebSocket control interface and state
   return {
