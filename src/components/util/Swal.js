@@ -126,6 +126,28 @@ export const SwalAlert = {
                     Swal.hideLoading()
                 }
             });
+        },
+        
+        soloTexto: () => {
+            return Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Este campo solo permite letras y espacios',
+                didOpen: () => {
+                    Swal.hideLoading()
+                }
+            });
+        },
+        
+        textoEmpresa: () => {
+            return Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'El nombre de empresa contiene caracteres no permitidos',
+                didOpen: () => {
+                    Swal.hideLoading()
+                }
+            });
         }
     }
 };

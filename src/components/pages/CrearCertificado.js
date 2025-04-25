@@ -35,6 +35,11 @@ const CrearCertificado = () => {
         }
     }, []); // Se ejecuta solo una vez al montar el componente
 
+    // Función para validar que un campo solo contiene texto y espacios
+    const soloTexto = (texto) => {
+        return /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/.test(texto);
+    }
+
     let fechaActual = new Date()
     let anio = fechaActual.getFullYear(),
         mes = fechaActual.getMonth() + 1,
@@ -67,7 +72,7 @@ const CrearCertificado = () => {
             }
           });
         try {
-            if(datos.nombres.length < 2 ){
+            if(datos.nombres.length < 2){
                 Swal.fire({
                     icon:'error',
                     title:'Oops...',
@@ -76,9 +81,20 @@ const CrearCertificado = () => {
                         Swal.hideLoading()
                       }
                 })    
-    
+                return;
             }
-           else if(datos.apellidos.length < 2){
+            else if(!soloTexto(datos.nombres)){
+                Swal.fire({
+                    icon:'error',
+                    title:'Oops...',
+                    text: 'El campo nombres solo permite letras y espacios',
+                    didOpen: () => {
+                        Swal.hideLoading()
+                      }
+                })
+                return;
+            }
+            else if(datos.apellidos.length < 2){
                 Swal.fire({
                     icon:'error',
                     title:'Oops...',
@@ -87,9 +103,20 @@ const CrearCertificado = () => {
                         Swal.hideLoading()
                       }
                 })
-    
+                return;
             }
-           else if(datos.cc.length < 4){
+            else if(!soloTexto(datos.apellidos)){
+                Swal.fire({
+                    icon:'error',
+                    title:'Oops...',
+                    text: 'El campo apellidos solo permite letras y espacios',
+                    didOpen: () => {
+                        Swal.hideLoading()
+                      }
+                })
+                return;
+            }
+            else if(datos.cc.length < 4){
                 Swal.fire({
                     icon:'error',
                     title:'Oops...',
@@ -98,7 +125,7 @@ const CrearCertificado = () => {
                         Swal.hideLoading()
                       }
                 })
-    
+                return;
             }else {
                 llenarDocx(datos, "Alimentos")
                 
@@ -114,15 +141,22 @@ const CrearCertificado = () => {
                   } 
             })
         }
-         
-        
-        
     }
-    const onChange = e => {        
+    
+    const onChange = e => {
+        const { name, value } = e.target;
+        
+        // Si es un campo de texto (nombres o apellidos) y no está vacío, validar que solo contenga letras
+        if ((name === 'nombres' || name === 'apellidos') && value !== '') {
+            if(!soloTexto(value)) {
+                return; // No actualizar el estado si contiene caracteres no permitidos
+            }
+        }
+        
         setDatos({
             ...datos,
-            [e.target.name]: e.target.value
-        })        
+            [name]: value
+        });       
     }
    
 

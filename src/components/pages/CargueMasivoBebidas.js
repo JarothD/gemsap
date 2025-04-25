@@ -9,6 +9,18 @@ const CargueMasivoBebidas = () => {
     const actualPage = 'BebidasMasivo'
     const [cargando, setCargando] = useState('Cargando...')
 
+    // Función para validar que un campo solo contiene texto y espacios
+    const soloTexto = (texto) => {
+        return /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/.test(texto);
+    }
+    
+    // Función para validar texto de empresa (permite más caracteres)
+    const textoEmpresa = (texto) => {
+        // Permite letras, números, espacios, puntos, comas, guiones, &, #, y otros símbolos comunes
+        // Excluye caracteres peligrosos como {}, [], <>, etc.
+        return /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ0-9\s\.\,\-\_\'\"\&\#\@\!\?\:\;\+\*\/\=\%\$\|\(\)]+$/.test(texto);
+    }
+
     // Usar useEffect para manejar la suscripción al WebSocket
     useEffect(() => {
         const handleMessage = (data) => {
@@ -47,7 +59,6 @@ const CargueMasivoBebidas = () => {
         return () => wss.removeMessageHandler(handleMessage);
     }, []);
 
-    // ...existing code...
     let fechaActual = new Date()
     let anio = fechaActual.getFullYear(),
         mes = fechaActual.getMonth() + 1,
@@ -73,6 +84,10 @@ const CargueMasivoBebidas = () => {
                 await SwalAlert.validations.nombreEmpresa();
                 return;
             }
+            if(!textoEmpresa(datos.nombreEmpresa)){
+                await SwalAlert.validations.textoEmpresa();
+                return;
+            }
             await cargueMasivoBebidas(datos);
         } catch (error) {
             console.log(error);
@@ -80,14 +95,22 @@ const CargueMasivoBebidas = () => {
         }
     }
 
-    const onChange = e => {        
+    const onChange = e => {
+        const { name, value } = e.target;
+        
+        // Si es el campo nombreEmpresa y no está vacío, validar con reglas específicas
+        if (name === 'nombreEmpresa' && value !== '') {
+            if(!textoEmpresa(value)) {
+                return; // No actualizar el estado si contiene caracteres no permitidos
+            }
+        }
+        
         setDatos({
             ...datos,
-            [e.target.name]: e.target.value
-        })        
+            [name]: value
+        });
     }
 
-    // El return se mantiene igual
     return ( 
         <div id='crear-certificado'>
             <img width="190" height="95" src="https://gemsap.com/wp-content/uploads/2022/08/imageonline-co-whitebackgroundremoved-1-4-190x95.png"  alt="Logo Gemsap" sizes="(max-width: 190px) 100vw, 190px" id='logo-empresa'></img>

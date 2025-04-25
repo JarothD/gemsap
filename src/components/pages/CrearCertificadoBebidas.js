@@ -7,6 +7,11 @@ import { llenarDocx } from '../util/DocxToPdf';
 const CrearCertificadoBebidas = () => {
     const actualPage = 'bebidas'
 
+    // Función para validar que un campo solo contiene texto y espacios
+    const soloTexto = (texto) => {
+        return /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/.test(texto);
+    }
+
     let fechaActual = new Date()
     let anio = fechaActual.getFullYear(),
         mes = fechaActual.getMonth() + 1,
@@ -34,8 +39,16 @@ const CrearCertificadoBebidas = () => {
                 await SwalAlert.validations.nombres();
                 return;
             }
+            if(!soloTexto(datos.nombres)){
+                await SwalAlert.validations.soloTexto();
+                return;
+            }
             if(datos.apellidos.length < 2){
                 await SwalAlert.validations.apellidos();
+                return;
+            }
+            if(!soloTexto(datos.apellidos)){
+                await SwalAlert.validations.soloTexto();
                 return;
             }
             if(datos.cc.length < 4){
@@ -50,11 +63,20 @@ const CrearCertificadoBebidas = () => {
         }
     }
 
-    const onChange = e => {        
+    const onChange = e => {
+        const { name, value } = e.target;
+        
+        // Si es un campo de texto (nombres o apellidos) y no está vacío, validar que solo contenga letras
+        if ((name === 'nombres' || name === 'apellidos') && value !== '') {
+            if(!soloTexto(value)) {
+                return; // No actualizar el estado si contiene caracteres no permitidos
+            }
+        }
+        
         setDatos({
             ...datos,
-            [e.target.name]: e.target.value
-        })        
+            [name]: value
+        });
     }
 
     return ( 
